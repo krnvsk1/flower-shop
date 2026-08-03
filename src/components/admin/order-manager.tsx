@@ -28,7 +28,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { RefreshCw, AlertTriangle } from 'lucide-react'
+import { RefreshCw, AlertTriangle, PackageCheck, PackageX } from 'lucide-react'
 
 type OrderItem = {
   id: string
@@ -118,7 +118,7 @@ export function OrderManager() {
     }
   }
 
-  const confirmCancel = async () => {
+  const confirmCancel = async (restoreStock: boolean) => {
     if (!cancelDialog.order) return
     const order = cancelDialog.order
 
@@ -126,10 +126,18 @@ export function OrderManager() {
       const res = await fetch(`/api/admin/orders/${order.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: 'cancelled', previousStatus: order.status }),
+        body: JSON.stringify({
+          status: 'cancelled',
+          previousStatus: order.status,
+          restoreStock,
+        }),
       })
       if (res.ok) {
-        toast.success('Заказ отменён. Остатки на складе восстановлены.')
+        if (restoreStock) {
+          toast.success('Заказ отменён. Остатки возвращены на склад.')
+        } else {
+          toast.success('Заказ отменён. Товары списаны.')
+        }
         fetchOrders()
       }
     } catch {
@@ -255,40 +263,65 @@ export function OrderManager() {
         </div>
       </div>
 
-      {/* Cancel Confirmation Dialog */}
+      {/* Cancel Confirmation Dialog — with restore/writeoff choice */}
       <Dialog open={cancelDialog.open} onOpenChange={(open) => setCancelDialog({ open, order: null })}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <AlertTriangle className="w-5 h-5 text-amber-500" />
               Отменить заказ?
             </DialogTitle>
             <DialogDescription asChild>
-              <div className="space-y-2">
+              <div className="space-y-3">
                 <p>
                   Заказ от <strong>{cancelDialog.order?.clientName}</strong> на сумму{' '}
                   <strong>{cancelDialog.order?.totalAmount.toLocaleString('ru-RU')} ₽</strong> будет отменён.
                 </p>
-                <p className="text-amber-600 font-medium">
-                  ⚠️ Остатки товаров на складе будут восстановлены.
+                <p className="text-sm text-muted-foreground">
+                  Что сделать с товарами из этого заказа?
                 </p>
               </div>
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter className="gap-2">
+
+          {/* Choice buttons */}
+          <div className="flex flex-col gap-3 py-2">
             <Button
               variant="outline"
+              className="h-auto py-4 px-4 flex items-start gap-3 cursor-pointer border-emerald-200 hover:bg-emerald-50 hover:border-emerald-300 justify-start"
+              onClick={() => confirmCancel(true)}
+            >
+              <PackageCheck className="w-5 h-5 text-emerald-600 mt-0.5 flex-shrink-0" />
+              <div className="text-left">
+                <p className="font-medium text-emerald-700">Вернуть на склад</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Остатки товаров будут восстановлены. Цветы вернутся в продажу.
+                </p>
+              </div>
+            </Button>
+
+            <Button
+              variant="outline"
+              className="h-auto py-4 px-4 flex items-start gap-3 cursor-pointer border-rose-200 hover:bg-rose-50 hover:border-rose-300 justify-start"
+              onClick={() => confirmCancel(false)}
+            >
+              <PackageX className="w-5 h-5 text-rose-600 mt-0.5 flex-shrink-0" />
+              <div className="text-left">
+                <p className="font-medium text-rose-700">Списать</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Товары будут списаны как испорченные/непроданные. Запись появится в разделе «Списания».
+                </p>
+              </div>
+            </Button>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="ghost"
               onClick={() => setCancelDialog({ open: false, order: null })}
               className="cursor-pointer"
             >
-              Назад
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={confirmCancel}
-              className="cursor-pointer"
-            >
-              Отменить заказ
+              Отмена
             </Button>
           </DialogFooter>
         </DialogContent>

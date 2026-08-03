@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useCallback, useSyncExternalStore } from 'react';
 import { FlowerGrid } from '@/components/store/flower-grid';
 import { StoreHeader } from '@/components/store/store-header';
 import { CartDrawer } from '@/components/store/cart-drawer';
@@ -11,18 +11,27 @@ import { Shield } from 'lucide-react';
 
 const SESSION_KEY = 'flower_admin_auth';
 
+function useIsMounted() {
+  return useSyncExternalStore(
+    (onStoreChange) => {
+      onStoreChange();
+      return () => {};
+    },
+    () => true,
+    () => false
+  );
+}
+
 export default function Home() {
   const [showAdmin, setShowAdmin] = useState(false);
-  const [mounted, setMounted] = useState(false);
   const [cartOpen, setCartOpen] = useState(false);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
+  const mounted = useIsMounted();
 
-  useEffect(() => {
-    setMounted(true);
-    if (sessionStorage.getItem(SESSION_KEY) === 'true') {
-      setShowAdmin(true);
-    }
-  }, []);
+  // Read sessionStorage only on client after mount
+  const isAdminSession = mounted && typeof window !== 'undefined'
+    ? sessionStorage.getItem(SESSION_KEY) === 'true'
+    : false;
 
   const handleToggleAdmin = () => {
     const next = !showAdmin;
@@ -33,7 +42,7 @@ export default function Home() {
   };
 
   // Admin mode — show admin panel (it has its own auth gate)
-  if (mounted && showAdmin) {
+  if (isAdminSession || showAdmin) {
     return (
       <div className="relative">
         {/* Small toggle to go back to store */}

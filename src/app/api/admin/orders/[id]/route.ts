@@ -7,7 +7,7 @@ export async function PATCH(
 ) {
   try {
     const { id } = await params
-    const { status, previousStatus } = await req.json()
+    const { status, previousStatus, restoreStock } = await req.json()
 
     const existingOrder = await db.order.findUnique({
       where: { id },
@@ -18,16 +18,33 @@ export async function PATCH(
       return NextResponse.json({ error: 'Order not found' }, { status: 404 })
     }
 
-    // If cancelling an order, restore stock
+    // If cancelling an order — handle stock based on choice
     if (status === 'cancelled' && previousStatus !== 'cancelled') {
-      await Promise.all(
-        existingOrder.items.map((item) =>
-          db.flower.update({
-            where: { id: item.flowerId },
-            data: { stock: { increment: item.quantity } },
-          })
+      if (restoreStock === true) {
+        // Restore stock back to warehouse
+        await Promise.all(
+          existingOrder.items.map((item) =>
+            db.flower.update({
+              where: { id: item.flowerId },
+              data: { stock: { increment: item.quantity } },
+            })
+          )
         )
-      )
+      } else if (restoreStock === false) {
+        // Write off — stock stays deducted, create write-off records
+        await Promise.all(
+          existingOrder.items.map((item) =>
+            db.writeOff.create({
+              data: {
+                flowerId: item.flowerId,
+                flowerName: item.flowerName,
+                quantity: item.quantity,
+                reason: `Списание по отменённому заказу ${id.slice(0, 8)}`,
+              },
+            })
+          )
+        )
+      }
     }
 
     const order = await db.order.update({
