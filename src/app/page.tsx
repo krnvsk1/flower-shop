@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { FlowerGrid } from '@/components/store/flower-grid';
 import { StoreHeader } from '@/components/store/store-header';
 import { CartDrawer } from '@/components/store/cart-drawer';
@@ -12,12 +12,17 @@ import { Shield } from 'lucide-react';
 const SESSION_KEY = 'flower_admin_auth';
 
 export default function Home() {
-  const [showAdmin, setShowAdmin] = useState(() => {
-    if (typeof window === 'undefined') return false;
-    return sessionStorage.getItem(SESSION_KEY) === 'true';
-  });
+  const [showAdmin, setShowAdmin] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const [cartOpen, setCartOpen] = useState(false);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+    if (sessionStorage.getItem(SESSION_KEY) === 'true') {
+      setShowAdmin(true);
+    }
+  }, []);
 
   const handleToggleAdmin = () => {
     const next = !showAdmin;
@@ -28,7 +33,7 @@ export default function Home() {
   };
 
   // Admin mode — show admin panel (it has its own auth gate)
-  if (showAdmin) {
+  if (mounted && showAdmin) {
     return (
       <div className="relative">
         {/* Small toggle to go back to store */}
