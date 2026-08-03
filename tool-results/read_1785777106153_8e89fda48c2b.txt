@@ -1,0 +1,502 @@
+   300→   300→        ? { type: ShadingType.CLEAR, fill: palette.surface }
+   301→   301→        : { type: ShadingType.CLEAR, fill: "FFFFFF" },
+   302→   302→      margins: { top: 60, bottom: 60, left: 120, right: 120 },
+   303→   303→    })),
+   304→   304→  });
+   305→   305→}
+   306→   306→```
+   307→   307→
+   308→   308→### 3. Horizontal-Only — Business (Default)
+   309→   309→
+   310→   310→```js
+   311→   311→const horizontalTable = new Table({
+   312→   312→  width: { size: 100, type: WidthType.PERCENTAGE },
+   313→   313→  borders: {
+   314→   314→    top: { style: BorderStyle.SINGLE, size: 2, color: palette.accent.replace("#","") },
+   315→   315→    bottom: { style: BorderStyle.SINGLE, size: 2, color: palette.accent.replace("#","") },
+   316→   316→    left: { style: BorderStyle.NONE },
+   317→   317→    right: { style: BorderStyle.NONE },
+   318→   318→    insideHorizontal: { style: BorderStyle.SINGLE, size: 1, color: "D0D0D0" },
+   319→   319→    insideVertical: { style: BorderStyle.NONE },
+   320→   320→  },
+   321→   321→  rows: [/* header row with accent shading, then data rows */],
+   322→   322→});
+   323→   323→```
+   324→   324→
+   325→   325→**⚠️ CRITICAL**: Always set `margins` at the Table or TableCell level. Without margins, text touches cell borders.
+   326→   326→
+   327→   327→### Table Color Token Derivation
+   328→   328→
+   329→   329→Each palette in `coverPalettes` provides a `table` object with pre-computed colors for all 3 table styles:
+   330→   330→
+   331→   331→| Token | Used in | Description |
+   332→   332→|-------|---------|-------------|
+   333→   333→| `table.headerBg` | Zebra Stripe, Horizontal-Only | Table header background color |
+   334→   334→| `table.headerText` | Zebra Stripe, Horizontal-Only | Table header text color (must pass WCAG AA contrast) |
+   335→   335→| `table.accentLine` | Three-Line | Top/bottom/header-bottom line color |
+   336→   336→| `table.innerLine` | Horizontal-Only | Inner horizontal separator line color |
+   337→   337→| `table.surface` | Zebra Stripe | Alternating row background (light tint) |
+   338→   338→
+   339→   339→**Usage:**
+   340→   340→```js
+   341→   341→const palette = coverPalettes["DS-1"];
+   342→   342→const t = palette.table;
+   343→   343→// Three-Line: use t.accentLine for border colors
+   344→   344→// Zebra: use t.headerBg, t.headerText, t.surface
+   345→   345→// Horizontal: use t.headerBg, t.headerText, t.innerLine
+   346→   346→```
+   347→   347→
+   348→   348→**⚠️ High-saturation accent override**: For DM-1, FG-1, and SN-2, the table colors are intentionally darkened/desaturated relative to the cover accent. Bright accent colors that look good on dark cover backgrounds are too eye-straining on white body pages. Always use `palette.table.*` for tables, never the raw `palette.accent`.
+   349→   349→
+   350→   350→---
+   351→   351→---
+   352→   352→
+   353→   353→## Cover Page Design System
+   354→   354→
+   355→   355→### Design Philosophy
+   356→   356→
+   357→   357→Covers use **7 validated layout recipes** + **parameterized variants** instead of free combination. Each recipe's background, layout, and decoration are visually verified. Differentiation comes from **palette × font size × content variation**.
+   358→   358→
+   359→   359→**Architecture principle:** All recipes use a **single 16838 outer wrapper table** (one row, exact height). Recipes R1/R2/R3 use **ZERO nested tables** — all decoration is achieved via **paragraph borders** (left/right/top/bottom). This ensures maximum cross-engine stability (MS Office + WPS).
+   360→   360→
+   361→   361→### Cover Color Palettes (Dark Mode + Light Mode)
+   362→   362→
+   363→   363→Each palette defines 3 core colors (Background, Primary, Accent) + derived cover/table tokens.
+   364→   364→
+   365→   365→⚠️ **Disambiguation: `cover.titleColor` is a COLOR value, not title text.** All keys under `cover: { ... }` are **color hex codes** for styling cover text elements. They are NOT text content. The actual title text comes from `config.title`. Never use `P.titleColor` as the `text` parameter of a `TextRun` — it must only be used as the `color` parameter.
+   366→   366→
+   367→   367→```js
+   368→   368→// ✅ Correct — config.title is the text, P.titleColor is the color
+   369→   369→new TextRun({ text: config.title, color: P.titleColor })
+   370→   370→
+   371→   371→// ❌ WRONG — using color value as text content
+   372→   372→new TextRun({ text: P.titleColor, color: P.titleColor })  // displays "FFFFFF" as visible text!
+   373→   373→```
+   374→   374→
+   375→   375→```js
+   376→   376→const coverPalettes = {
+   377→   377→  // ── Light backgrounds (7) ──
+   378→   378→  "WM-1": { // Warm Teal — education, training, marketing
+   379→   379→    bg: "F4F1E9", primary: "15857A", accent: "FF6A3B",
+   380→   380→    cover: { titleColor: "15857A", subtitleColor: "606060", metaColor: "707070", footerColor: "A0A0A0" },
+   381→   381→    table: { headerBg: "15857A", headerText: "FFFFFF", accentLine: "15857A", innerLine: "D5D0C8", surface: "F0EDE5" },
+   382→   382→  },
+   383→   383→  "CM-2": { // Blue Orange — tech, corporate, whitepaper
+   384→   384→    bg: "FEFEFE", primary: "1284BA", accent: "FF862F",
+   385→   385→    cover: { titleColor: "1284BA", subtitleColor: "606060", metaColor: "707070", footerColor: "A0A0A0" },
+   386→   386→    table: { headerBg: "1284BA", headerText: "FFFFFF", accentLine: "1284BA", innerLine: "D8E4EC", surface: "EDF4F9" },
+   387→   387→  },
+   388→   388→  "SN-2": { // Soft Purple — creative, branding, events (⚠️ NOT for business)
+   389→   389→    bg: "EBDCEF", primary: "73593C", accent: "B13DC6",
+   390→   390→    cover: { titleColor: "73593C", subtitleColor: "606060", metaColor: "707070", footerColor: "A0A0A0" },
+   391→   391→    table: { headerBg: "7A4D8A", headerText: "FFFFFF", accentLine: "7A4D8A", innerLine: "D8D0DE", surface: "F2EDF5" },
+   392→   392→  },
+   393→   393→  "MIN-1": { // Warm Gold — consulting, minimalist business, premium proposals
+   394→   394→    bg: "F3F1ED", primary: "000000", accent: "D6C096",
+   395→   395→    cover: { titleColor: "000000", subtitleColor: "606060", metaColor: "707070", footerColor: "A0A0A0" },
+   396→   396→    table: { headerBg: "D6C096", headerText: "1A1A1A", accentLine: "000000", innerLine: "DDD8CC", surface: "F5F3ED" },
+   397→   397→  },
+   398→   398→  "WR-2": { // Retro Green — traditional industry, finance compliance, legal
+   399→   399→    bg: "F4F1E9", primary: "2A4A3A", accent: "C89F62",
+   400→   400→    cover: { titleColor: "2A4A3A", subtitleColor: "606060", metaColor: "707070", footerColor: "A0A0A0" },
+   401→   401→    table: { headerBg: "2A4A3A", headerText: "FFFFFF", accentLine: "2A4A3A", innerLine: "D0D8D0", surface: "F0EDE5" },
+   402→   402→  },
+   403→   403→  "MC-1": { // Medical Blue — healthcare, clinical reports
+   404→   404→    bg: "F5F8FC", primary: "1A5276", accent: "2E86C1",
+   405→   405→    cover: { titleColor: "1A5276", subtitleColor: "606060", metaColor: "707070", footerColor: "A0A0A0" },
+   406→   406→    table: { headerBg: "2E86C1", headerText: "FFFFFF", accentLine: "1A5276", innerLine: "D0DDE8", surface: "EDF3F8" },
+   407→   407→  },
+   408→   408→  "GV-1": { // Official Red — government, state-owned enterprise, party building
+   409→   409→    bg: "FAFAFA", primary: "1A1A1A", accent: "C0392B",
+   410→   410→    cover: { titleColor: "1A1A1A", subtitleColor: "606060", metaColor: "707070", footerColor: "A0A0A0" },
+   411→   411→    table: { headerBg: "C0392B", headerText: "FFFFFF", accentLine: "C0392B", innerLine: "DDD0D0", surface: "F8F0F0" },
+   412→   412→  },
+   413→   413→
+   414→   414→  // ── Dark backgrounds (5) ──
+   415→   415→  "DS-1": { // Deep Sea — annual report, general business
+   416→   416→    bg: "0B1C2C", primary: "FFFFFF", accent: "529286",
+   417→   417→    cover: { titleColor: "FFFFFF", subtitleColor: "B0B8C0", metaColor: "90989F", footerColor: "687078" },
+   418→   418→    table: { headerBg: "529286", headerText: "FFFFFF", accentLine: "529286", innerLine: "BECFCC", surface: "E8ECEB" },
+   419→   419→  },
+   420→   420→  "IG-1": { // Ink Gold — finance, investment, luxury brand
+   421→   421→    bg: "1A1A1A", primary: "FFFFFF", accent: "C9A84C",
+   422→   422→    cover: { titleColor: "FFFFFF", subtitleColor: "B0B8C0", metaColor: "90989F", footerColor: "687078" },
+   423→   423→    table: { headerBg: "C9A84C", headerText: "1A1A1A", accentLine: "C9A84C", innerLine: "DDD5C0", surface: "F5F2E8" },
+   424→   424→  },
+   425→   425→  "DM-1": { // Deep Cyan — AI, tech proposals, digital transformation
+   426→   426→    bg: "162235", primary: "FFFFFF", accent: "37DCF2",
+   427→   427→    cover: { titleColor: "FFFFFF", subtitleColor: "B0B8C0", metaColor: "90989F", footerColor: "687078" },
+   428→   428→    // ⚠️ Table uses darkened accent (#1B6B7A) — bright #37DCF2 is too saturated for white-page tables
+   429→   429→    table: { headerBg: "1B6B7A", headerText: "FFFFFF", accentLine: "1B6B7A", innerLine: "C8DDE2", surface: "EDF3F5" },
+   430→   430→  },
+   431→   431→  "FG-1": { // Forest Mint — ESG, environmental, sustainability, agriculture
+   432→   432→    bg: "0C1F1A", primary: "FFFFFF", accent: "3DDBB5",
+   433→   433→    cover: { titleColor: "FFFFFF", subtitleColor: "B0B8C0", metaColor: "90989F", footerColor: "687078" },
+   434→   434→    // ⚠️ Table uses darkened accent (#2A7A65) — bright #3DDBB5 is too saturated for white-page tables
+   435→   435→    table: { headerBg: "2A7A65", headerText: "FFFFFF", accentLine: "2A7A65", innerLine: "C5D8D0", surface: "EDF5F2" },
+   436→   436→  },
+   437→   437→  "GO-1": { // Graphite Orange — proposals, bidding, PRD
+   438→   438→    bg: "1A2330", primary: "FFFFFF", accent: "D4875A",
+   439→   439→    cover: { titleColor: "FFFFFF", subtitleColor: "B0B8C0", metaColor: "90989F", footerColor: "687078" },
+   440→   440→    table: { headerBg: "D4875A", headerText: "FFFFFF", accentLine: "D4875A", innerLine: "DDD0C8", surface: "F8F0EB" },
+   441→   441→  },
+   442→   442→
+   443→   443→  // ── Special (R5 only) ──
+   444→   444→  "ED-1": { // Editorial Warm — lesson plans, cultural/creative, light reports, newsletters
+   445→   445→    bg: "F7F7F5", primary: "2C2C2C", accent: "D4D4D0",
+   446→   446→    cover: { titleColor: "2C2C2C", subtitleColor: "6B6B6B", metaColor: "9A9A9A", footerColor: "9A9A9A" },
+   447→   447→    table: { headerBg: "E8E8E4", headerText: "2C2C2C", accentLine: "D4D4D0", innerLine: "E8E8E4", surface: "FAFAF8" },
+   448→   448→    // Note: R6 exclusive. Minimal editorial style — warm grey tones, no colored headers.
+   449→   449→  },
+   450→   450→
+   451→   451→  "ST-1": { // Swiss Tech — cultural/creative research, trend reports, brand strategy
+   452→   452→    bg: "E2E8F0", primary: "0F172A", accent: "0042E6",
+   453→   453→    cover: { titleColor: "0F172A", subtitleColor: "475569", metaColor: "475569", footerColor: "475569" },
+   454→   454→    table: { headerBg: "475569", headerText: "FFFFFF", accentLine: "0042E6", innerLine: "CBD5E1", surface: "F1F5F9" },
+   455→   455→    // Note: R7 exclusive. Swiss minimalist — slate grey bg, Klein blue accent, open-frame tables.
+   456→   456→  },
+   457→   457→
+   458→   458→  "ACADEMIC": { // Academic Black — thesis, standards (R5 exclusive, not in general routing)
+   459→   459→    bg: "FFFFFF", primary: "000000", accent: "000000",
+   460→   460→    cover: { titleColor: "000000", subtitleColor: "404040", metaColor: "606060", footerColor: "808080" },
+   461→   461→    table: { headerBg: "000000", headerText: "000000", accentLine: "000000", innerLine: "000000", surface: "FFFFFF" },
+   462→   462→    // Note: Academic uses Three-Line table only, with pure black lines. No colored headers.
+   463→   463→  },
+   464→   464→};
+   465→   465→```
+   466→   466→
+   467→   467→### ⚠️ Dark Cover → Light Table Rule
+   468→   468→
+   469→   469→Covers with dark backgrounds (DS-1, IG-1, DM-1, FG-1, GO-1) use bright accent on dark bg.
+   470→   470→Body page tables are always on WHITE background — table colors use **darkened/desaturated** variants of the accent.
+   471→   471→High-saturation accent colors (DM-1 #37DCF2, FG-1 #3DDBB5, SN-2 #B13DC6) are explicitly overridden in `table.*` fields above.
+   472→   472→
+   473→   473→### ⚠️ SN-2 Scene Restriction
+   474→   474→
+   475→   475→SN-2 (Soft Purple) is restricted to creative/branding/event documents ONLY.
+   476→   476→It MUST NOT be used for: business reports, consulting, finance, legal, government, medical, or technical documents.
+   477→   477→
+   478→   478→### Industry → Palette Recommendations
+   479→   479→
+   480→   480→| Industry / Theme | Recommended Palette | Fallback |
+   481→   481→|-----------|---------|---------|
+   482→   482→| General annual report | DS-1 Deep Sea | CM-2 |
+   483→   483→| Finance / investment / luxury | IG-1 Ink Gold | WR-2, MIN-1 |
+   484→   484→| Tech / AI / internet | DM-1 Deep Cyan | CM-2 |
+   485→   485→| ESG / environmental / sustainability | FG-1 Forest Mint | DS-1 |
+   486→   486→| Consulting / diagnostic report | MIN-1 Warm Gold | WR-2 |
+   487→   487→| Business proposal / bidding / PRD | GO-1 Graphite Orange | CM-2 |
+   488→   488→| Education / training (formal) | WM-1 Warm Teal | CM-2 |
+   489→   489→| Lesson plan (arts/general) | ED-1 Editorial Warm | WM-1 |
+   490→   490→| Cultural / newsletter / internal | ED-1 Editorial Warm | WM-1 |
+   491→   491→| Events / activities | ED-1 Editorial Warm | WM-1 |
+   492→   492→| Medical / healthcare / clinical | MC-1 Medical Blue | CM-2 |
+   493→   493→| Government / state-owned / party | GV-1 Official Red | MIN-1 |
+   494→   494→| Traditional industry / legal / compliance | WR-2 Retro Green | MIN-1 |
+   495→   495→| Creative / branding (formal) | SN-2 Soft Purple | WM-1 |
+   496→   496→| Whitepaper (general) | CM-2 Blue Orange | DS-1, MIN-1 |
+   497→   497→| Academic / thesis / standards | ACADEMIC | — |
+   498→   498→
+   499→   499→---
+   500→   500→
+   501→   501→### ⚠️ Recipe Routing Rules (Replaces Free Selection)
+   502→   502→
+   503→   503→```js
+   504→   504→function selectCoverRecipe(docType, industry, titleLength) {
+   505→   505→  // No cover for these types
+   506→   506→  if (["contract", "official", "exam", "resume"].includes(docType)) return null;
+   507→   507→
+   508→   508→  // Academic
+   509→   509→  if (docType === "academic") return { recipe: "R5", palette: "ACADEMIC" };
+   510→   510→
+   511→   511→  // Thesis proposal report (开题报告)
+   512→   512→  if (docType === "proposal_report") return { recipe: "R5", palette: "ACADEMIC" };
+   513→   513→
+   514→   514→  // Lesson plans — R6 editorial for arts/general, R4 for STEM
+   515→   515→  if (docType === "lesson_plan" || docType === "lessonplan") {
+   516→   516→    const stemKeywords = ["math", "physics", "chemistry", "biology", "science", "tech", "computer", "engineering"];
+   517→   517→    if (stemKeywords.some(k => (industry || "").toLowerCase().includes(k))) {
+   518→   518→      return { recipe: "R4", palette: "DM-1" };
+   519→   519→    }
+   520→   520→    // Arts, general, and all other lesson plans → R6 editorial
+   521→   521→    return { recipe: "R6", palette: "ED-1" };
+   522→   522→  }
+   523→   523→
+   524→   524→  // Creative/branding/design (formal) → R3 centered card frame
+   525→   525→  if (["creative", "branding", "design"].includes(docType)) {
+   526→   526→    return { recipe: "R3", palette: "SN-2" };
+   527→   527→  }
+   528→   528→
+   529→   529→  // Cultural/newsletter/internal (casual) → R6 editorial
+   530→   530→  if (["cultural", "newsletter", "internal"].includes(docType)) {
+   531→   531→    return { recipe: "R6", palette: "ED-1" };
+   532→   532→  }
+   533→   533→
+   534→   534→  // Activity/event planning → R6 editorial
+   535→   535→  if (docType === "activity") return { recipe: "R6", palette: "ED-1" };
+   536→   536→
+   537→   537→  // Trend/research reports in cultural/creative/brand fields → R7 Swiss Tech
+   538→   538→  if (docType === "trend_report" || docType === "research_report") {
+   539→   539→    if (["cultural", "creative", "brand", "design"].includes(industry)) {
+   540→   540→      return { recipe: "R7", palette: "ST-1" };
+   541→   541→    }
+   542→   542→  }
+   543→   543→
+   544→   544→  // Formal/business subtypes
+   545→   545→  if (docType === "whitepaper") return { recipe: "R2", palette: industry === "finance" ? "IG-1" : "CM-2" };
+   546→   546→  if (docType === "consulting") return { recipe: "R2", palette: "MIN-1" };
+   547→   547→  if (docType === "proposal" || docType === "plan") return { recipe: "R4", palette: "GO-1" };
+   548→   548→
+   549→   549→  // Reports — palette by industry, use R1
+   550→   550→  if (docType === "report") {
+   551→   551→    const paletteMap = {
+   552→   552→      finance: "IG-1", consulting: "MIN-1",
+   553→   553→      tech: "DM-1", ai: "DM-1",
+   554→   554→      education: "WM-1", green: "FG-1",
+   555→   555→      medical: "MC-1", government: "GV-1",
+   556→   556→    };
+   557→   557→    return { recipe: "R1", palette: paletteMap[industry] || "DS-1" };
+   558→   558→  }
+   559→   559→
+   560→   560→  // Default
+   561→   561→  return { recipe: "R1", palette: "DS-1" };
+   562→   562→}
+   563→   563→
+   564→   564→// ── Long-title override (applied AFTER initial recipe selection) ──
+   565→   565→// Call this after selectCoverRecipe() when the actual title text is known.
+   566→   566→function applyLongTitleOverride(result, titleLength) {
+   567→   567→  if (!result || !result.recipe) return result;
+   568→   568→  // R5 (academic) is never overridden — it has its own calcTitleLayoutMixed()
+   569→   569→  if (result.recipe === "R5") return result;
+   570→   570→  // R6 (editorial) is designed for short titles only (≤20 chars, single line)
+   571→   571→  // Long titles → fall back to R1 (handles long titles best)
+   572→   572→  if (titleLength > 20 && result.recipe === "R6") {
+   573→   573→    return { recipe: "R1", palette: "WM-1" }; // ED-1 has no dark bg, use WM-1 (warm teal)
+   574→   574→  }
+   575→   575→  // R3/R4 struggle with long titles → fall back to R1 (same palette)
+   576→   576→  if (titleLength > 20 && ["R3", "R4"].includes(result.recipe)) {
+   577→   577→    return { recipe: "R1", palette: result.palette };
+   578→   578→  }
+   579→   579→  // Very long titles: even R2 centered looks scattered → R1 left-aligned
+   580→   580→  if (titleLength > 30 && result.recipe === "R2") {
+   581→   581→    return { recipe: "R1", palette: result.palette };
+   582→   582→  }
+   583→   583→  return result;
+   584→   584→}
+   585→   585→```
+   586→   586→
+   587→   587→### Scene Cover Routing
+   588→   588→
+   589→   589→| Scene | Recipe | Default Palette | Special Requirements |
+   590→   590→|------|------|---------|----------|
+   591→   591→| academic thesis | R5 (Clean White) | ACADEMIC | School name + 2-col meta table with underlines, see academic.md |
+   592→   592→| thesis proposal report (开题报告) | R5 (Clean White) | ACADEMIC | Use `buildProposalCover()` from academic.md |
+   593→   593→| business report (general) | R1 (Pure Paragraph Left) | DS-1 Deep Sea | Auto-select palette by industry |
+   594→   594→| whitepaper | R2 (Double-Rule Frame) | CM-2 Blue Orange / IG-1 Ink Gold | — |
+   595→   595→| consulting report | R2 (Double-Rule Frame) | MIN-1 Warm Gold | — |
+   596→   596→| business proposal / plan | R4 (Top Color Block) | GO-1 Graphite Orange | — |
+   597→   597→| events / activities | R6 (Editorial Warm) | ED-1 Editorial Warm | Light/casual style, short titles only (≤20 chars) |
+   598→   598→| lesson plan (STEM) | R4 (Top Color Block) | DM-1 Deep Cyan | Route by subject, see selectCoverRecipe |
+   599→   599→| lesson plan (arts/general) | R6 (Editorial Warm) | ED-1 Editorial Warm | Casual editorial style, short titles only |
+   600→   600→| creative / branding / design (formal) | R3 (Centered Card Frame) | SN-2 Soft Purple | Product overview, brand doc, design report |
+   601→   601→| cultural / newsletter / internal | R6 (Editorial Warm) | ED-1 Editorial Warm | Light/casual style, short titles only (≤20 chars) |
+   602→   602→| trend/research report (cultural/creative/brand) | R7 (Swiss Tech) | ST-1 Swiss Tech | Minimalist slate bg, Klein blue accent, open-frame tables |
+   603→   603→| education report | R1 (Pure Paragraph Left) | WM-1 Warm Teal | For education reports, NOT lesson plans |
+   604→   604→| ESG / environmental | R1 (Pure Paragraph Left) | FG-1 Forest Mint | — |
+   605→   605→| medical / healthcare | R1 (Pure Paragraph Left) | MC-1 Medical Blue | — |
+   606→   606→| government / state-owned | R1 (Pure Paragraph Left) | GV-1 Official Red | — |
+   607→   607→| resume | — | — | No standalone cover |
+   608→   608→| contract | — | — | No standalone cover (title page is first page) |
+   609→   609→| official document | — | — | No standalone cover |
+   610→   610→| exam paper | — | — | No standalone cover |
+   611→   611→
+   612→   612→---
+   613→   613→
+   614→   614→### Cover Title Length Guidelines
+   615→   615→
+   616→   616→When the user does NOT specify an exact title, the model should craft a title within the recommended range. If the user provides a title that exceeds the comfortable range, apply long-title routing in `selectCoverRecipe()` (see above).
+   617→   617→
+   618→   618→| Recipe | Comfortable (1–2 lines) | Maximum (3 lines) | Long Title Tolerance |
+   619→   619→|--------|------------------------|--------------------|----------------------|
+   620→   620→| R1     | 8–20 chars             | ≤50 chars          | ⭐⭐⭐⭐⭐ Best (left-aligned, full-page bg) |
+   621→   621→| R2     | 8–18 chars             | ≤45 chars          | ⭐⭐⭐⭐ Good (full-page bg, but centered) |
+   622→   622→| R3     | 8–15 chars             | ≤40 chars          | ⭐⭐ Poor (narrowest width) |
+   623→   623→| R4     | 8–18 chars             | ≤45 chars          | ⭐⭐ Poor (fixed-height color block) |
+   624→   624→| R5     | 8–16 chars             | ≤42 chars          | ⭐⭐⭐ OK (academic only, mixed-width calc) |
+   625→   625→| R6     | 8–15 chars             | ≤20 chars (1 line) | ⭐ Single line only (editorial, no multi-line) |
+   626→   626→| R7     | 8–24 chars             | ≤42 chars (3 lines) | ⭐⭐⭐⭐ Good (left-aligned, light bg, dynamic spacing) |
+   627→   627→
+   628→   628→**Title crafting rules (when model generates the title):**
+   629→   629→1. Prefer concise titles within the "comfortable" range
+   630→   630→2. If topic requires detail, split into title + subtitle (e.g., title="数字化转型战略研究" subtitle="——以某某企业为例")
+   631→   631→3. Never exceed the "maximum" range unless user explicitly provides the full title
+   632→   632→
+   633→   633→---
+   634→   634→
+   635→   635→### ⚠️ Cover Page Break Rules
+   636→   636→
+   637→   637→Cover should be an independent section — **no PageBreak at the end needed**. The next section automatically starts a new page.
+   638→   638→
+   639→   639→```js
+   640→   640→// ✅ Correct — cover is a separate section, no trailing PageBreak
+   641→   641→sections: [
+   642→   642→  { properties: { /* Cover section, margin all 0 */ }, children: buildCover(...) },
+   643→   643→  { properties: { /* Body section */ }, children: buildContent(...) },
+   644→   644→]
+   645→   645→```
+   646→   646→
+   647→   647→### ⚠️ Cover Content Overflow Prevention (Mandatory)
+   648→   648→
+   649→   649→1. Cover section page margin is 0; total content height ≤ 15638 twips (1200 twips safety margin for cross-engine compatibility — MS Office renders large fonts taller than calculated).
+   650→   650→2. Color block Table `height` must use `rule: "exact"` (never `"atLeast"`).
+   651→   651→3. Each recipe code includes height budget annotations — verify during generation.
+   652→   652→4. **`verticalAlign` must always be `"top"`**. Never use `"center"` or `"bottom"` in exact-height rows — content will be clipped or overflow. Use `spacing.before` on the first paragraph for vertical positioning.
+   653→   653→5. **Title font size MUST be dynamically calculated via `calcTitleLayout()`** (see below). Never hardcode font sizes above 40pt for cover titles. Every recipe MUST call `calcTitleLayout()` before building title paragraphs.
+   654→   654→6. **Never use `margins.top`/`margins.bottom` for vertical positioning inside exact-height cells**: Cell margins reduce available height unpredictably across MS Office and WPS. Use `spacing.before` on the first paragraph instead. Only `margins.left`/`margins.right` are safe.
+   655→   655→7. **Dynamic spacing is mandatory**: Use `calcCoverSpacing()` to compute `spacing.before` values dynamically based on content element count and title line count. Never use fixed large spacing values (e.g., `before: 4500`) that assume a specific title length.
+   656→   656→8. **Cover must be a single-page section**: The cover section must produce exactly ONE page. If content overflows to a second page, it means the height budget is violated. Common overflow causes and fixes:
+   657→   657→   - Title font too large → use `calcTitleLayout()` to auto-reduce
+   658→   658→   - Too many meta lines → reduce font size or remove less important lines
+   659→   659→   - Fixed `spacing.before` values too large → use `calcCoverSpacing()` for dynamic values
+   660→   660→   - Subtitle + English label + meta lines combined exceed budget → calculate total and reduce spacing
+   661→   661→9. **Cover wrapper table MUST use explicit `allNoBorders`**: The outer 16838 wrapper table and ALL nested tables inside the cover MUST set borders to NONE explicitly. Never rely on docx-js default borders (`single/auto/sz=4`). Default borders add ~8 twips per edge, which causes MS Office to calculate a total height slightly exceeding 16838 → content overflows to a blank page 2. WPS is more lenient but MS Office is strict. **This is the #1 cause of "blank page 2 in MS Office but not in WPS".**
+   662→   662→
+   663→   663→```js
+   664→   664→// ✅ MANDATORY: Define and use allNoBorders for every cover table
+   665→   665→const NB = { style: BorderStyle.NONE, size: 0, color: "FFFFFF" };
+   666→   666→const noBorders = { top: NB, bottom: NB, left: NB, right: NB };
+   667→   667→const allNoBorders = { top: NB, bottom: NB, left: NB, right: NB,
+   668→   668→                       insideHorizontal: NB, insideVertical: NB };
+   669→   669→
+   670→   670→new Table({
+   671→   671→  borders: allNoBorders,  // ← MANDATORY on every cover table
+   672→   672→  // ...
+   673→   673→});
+   674→   674→```
+   675→   675→
+   676→   676→10. **Decorative lines MUST use paragraph borders, NEVER text characters**: Horizontal decorative lines (accent strips, dividers, frame edges) must be implemented with `paragraph border.top` or `border.bottom` — never with text characters like `───`, `━━━`, `═══`, or `——————`. Character-drawn lines render at inconsistent widths across MS Office and WPS (font metrics differ), causing lines to appear truncated or misaligned. Paragraph borders render pixel-perfect in both engines and their width is controlled precisely via `indent.left` / `indent.right`.
+   677→   677→
+   678→   678→```js
+   679→   679→// ✅ Correct — paragraph border (R2 style thick accent rule)
+   680→   680→new Paragraph({
+   681→   681→  indent: { left: 1000, right: 1000 },
+   682→   682→  border: { top: { style: BorderStyle.SINGLE, size: 18, color: P.accent, space: 20 } },
+   683→   683→  children: [],
+   684→   684→})
+   685→   685→
+   686→   686→// ❌ FORBIDDEN — text character line (renders inconsistently)
+   687→   687→new Paragraph({
+   688→   688→  children: [new TextRun({ text: "───────────────", color: P.accent })]
+   689→   689→})
+   690→   690→```
+   691→   691→9. **Post-generation overflow check (mandatory)**: After building cover children, estimate total height:
+   692→   692→   ```js
+   693→   693→   function estimateCoverHeight(elements) {
+   694→   694→     let total = 0;
+   695→   695→     for (const el of elements) {
+   696→   696→       if (el instanceof Table) {
+   697→   697→         // Sum row heights (exact rows) or estimate 400 twips per row
+   698→   698→         const rows = el.root?.[0]?.rows || [];
+   699→   699→         for (const row of rows) {
+   700→   700→           total += row.height?.value || 400;
+   701→   701→         }
+   702→   702→       } else if (el instanceof Paragraph) {
+   703→   703→         const fontSize = el.root?.[0]?.size || 24; // half-pts
+   704→   704→         // ★ Use pt * 11.5 (= half-pt * 10 * 1.15) for accurate single-spacing estimate
+   705→   705→         const lineHeight = Math.max(fontSize * 11.5, 276); // min 276 (default 12pt)
+   706→   706→         const spacingBefore = el.spacing?.before || 0;
+   707→   707→         const spacingAfter = el.spacing?.after || 0;
+   708→   708→         total += lineHeight + spacingBefore + spacingAfter;
+   709→   709→       }
+   710→   710→     }
+   711→   711→     return total;
+   712→   712→   }
+   713→   713→   // ★ Target: estimateCoverHeight(coverChildren) < 15638 (16838 - 1200 safety)
+   714→   714→   ```
+   715→   715→
+   716→   716→---
+   717→   717→
+   718→   718→### ⚠️ Cover Title Layout — calcTitleLayout() (Mandatory for ALL Recipes)
+   719→   719→
+   720→   720→**Every cover recipe MUST use `calcTitleLayout()` to determine title font size and line breaks.** Hardcoding font sizes or passing the full title as a single TextRun is FORBIDDEN.
+   721→   721→
+   722→   722→**Every paragraph with font size > body text MUST set explicit line spacing** to prevent top clipping:
+   723→   723→```js
+   724→   724→// ★ MANDATORY: prevent inherited small line spacing from clipping large fonts
+   725→   725→spacing: { line: Math.ceil(titlePt * 23), lineRule: "atLeast", after: 100 }
+   726→   726→// Example: 36pt → line: 828; 44pt → line: 1012
+   727→   727→```
+   728→   728→Without this, the paragraph inherits body text line spacing (e.g., 560tw), which is shorter than the font height → top of characters gets clipped.
+   729→   729→
+   730→   730→```js
+   731→   731→/**
+   732→   732→ * Calculate safe font size and smart line breaks for cover titles.
+   733→   733→ * MUST be called by every recipe before building title paragraphs.
+   734→   734→ *
+   735→   735→ * @param {string}  title          Full title string
+   736→   736→ * @param {number}  maxWidthTwips  Available width for title text (twips, after subtracting margins/padding)
+   737→   737→ * @param {number}  preferredPt    Desired max font size in pt (default 40)
+   738→   738→ * @param {number}  minPt          Minimum allowed font size in pt (default 24)
+   739→   739→ * @returns {{ titlePt: number, titleLines: string[] }}
+   740→   740→ */
+   741→   741→function calcTitleLayout(title, maxWidthTwips, preferredPt = 40, minPt = 24) {
+   742→   742→  // Each CJK character width ≈ pt × 20 twips
+   743→   743→  const charWidth = (pt) => pt * 20;
+   744→   744→  const charsPerLine = (pt) => Math.floor(maxWidthTwips / charWidth(pt));
+   745→   745→
+   746→   746→  // Try from preferredPt downward until title fits in ≤ 3 lines
+   747→   747→  let titlePt = preferredPt;
+   748→   748→  let lines;
+   749→   749→  while (titlePt >= minPt) {
+   750→   750→    const cpl = charsPerLine(titlePt);
+   751→   751→    if (cpl < 2) { titlePt -= 2; continue; }
+   752→   752→    lines = splitTitleLines(title, cpl);
+   753→   753→    if (lines.length <= 3) break;
+   754→   754→    titlePt -= 2;
+   755→   755→  }
+   756→   756→
+   757→   757→  // If still > 3 lines at minPt, force 3 lines
+   758→   758→  if (!lines || lines.length > 3) {
+   759→   759→    const cpl = charsPerLine(minPt);
+   760→   760→    lines = splitTitleLines(title, cpl);
+   761→   761→    titlePt = minPt;
+   762→   762→  }
+   763→   763→
+   764→   764→  return { titlePt, titleLines: lines };
+   765→   765→}
+   766→   766→
+   767→   767→/**
+   768→   768→ * Smart Chinese title line-breaking — breaks at semantic boundaries, never mid-word.
+   769→   769→ *
+   770→   770→ * Rules:
+   771→   771→ * 1. Prefer breaking after particles, punctuation, connectors, underscores, spaces
+   772→   772→ * 2. Never split a compound word (e.g., "管理规范" must not become "管理规" + "范")
+   773→   773→ * 3. No single-character orphan on the last line — merge into previous line
+   774→   774→ * 4. If no good break point found within 60-130% of charsPerLine, break at charsPerLine
+   775→   775→ *
+   776→   776→ * @param {string} title        Full title string
+   777→   777→ * @param {number} charsPerLine Max characters per line at current font size
+   778→   778→ * @returns {string[]}          Array of line strings
+   779→   779→ */
+   780→   780→function splitTitleLines(title, charsPerLine) {
+   781→   781→  if (title.length <= charsPerLine) return [title];
+   782→   782→
+   783→   783→  // Characters that are safe break points (break AFTER these)
+   784→   784→  const breakAfter = new Set([
+   785→   785→    ...'，。、；：！？',              // CJK punctuation
+   786→   786→    ...'的与和及之在于为',            // CJK particles/prepositions
+   787→   787→    ...'-_—–·/',                     // connectors
+   788→   788→    ...' \t',                         // whitespace
+   789→   789→  ]);
+   790→   790→
+   791→   791→  const lines = [];
+   792→   792→  let remaining = title;
+   793→   793→
+   794→   794→  while (remaining.length > charsPerLine) {
+   795→   795→    let breakAt = -1;
+   796→   796→
+   797→   797→    // Search backward from charsPerLine to 60% for a break point
+   798→   798→    for (let i = charsPerLine; i >= Math.floor(charsPerLine * 0.6); i--) {
+   799→   799→      if (i < remaining.length && breakAfter.has(remaining[i - 1])) {
+
+[showing lines 300-799 of 1798; use offset=800 with limit to continue reading]
