@@ -1,0 +1,64 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ── Товары (цветы) ──
+model Flower {
+  id          String     @id @default(cuid())
+  name        String     // название: "Роза красная", "Тюльпан жёлтый"
+  description String?    // описание
+  price       Float      // цена за штуку
+  stock       Int        @default(0) // остаток на складе
+  imageUrl    String?    // ссылка на фото (optional)
+  category    String?    // категория: "розы", "тюльпаны", "сезонные"
+  active      Boolean    @default(true) // показывать ли на витрине
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  orderItems  OrderItem[]
+  writeOffs   WriteOff[]
+}
+
+// ── Заказы клиентов ──
+model Order {
+  id          String   @id @default(cuid())
+  clientName  String   // имя клиента
+  clientPhone String   // телефон клиента
+  status      String   @default("new") // new | processing | completed | cancelled
+  totalAmount Float    // сумма заказа
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  items       OrderItem[]
+}
+
+// ── Позиции заказа ──
+model OrderItem {
+  id          String   @id @default(cuid())
+  orderId     String
+  flowerId    String
+  flowerName  String   // имя на момент заказа (денормализация)
+  quantity    Int      // количество
+  price       Float    // цена за штуку на момент заказа
+  subtotal    Float    // сумма строки = quantity * price
+
+  order       Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  flower      Flower   @relation(fields: [flowerId], references: [id])
+}
+
+// ── Списания (админ учитывает испорченные/unsold цветы) ──
+model WriteOff {
+  id          String   @id @default(cuid())
+  flowerId    String
+  flowerName  String   // имя на момент списания
+  quantity    Int      // сколько списано
+  reason      String?  // причина: "увяли", "повреждены", "просрочка"
+  createdAt   DateTime @default(now())
+
+  flower      Flower   @relation(fields: [flowerId], references: [id])
+}
