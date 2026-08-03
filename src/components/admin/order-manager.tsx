@@ -75,9 +75,10 @@ export function OrderManager() {
   const [orders, setOrders] = useState<Order[]>([])
   const [loading, setLoading] = useState(true)
   const [filterStatus, setFilterStatus] = useState<string>('all')
-  const [cancelDialog, setCancelDialog] = useState<{ open: boolean; order: Order | null }>({
+  const [cancelDialog, setCancelDialog] = useState<{ open: boolean; order: Order | null; previousStatus: string }>({
     open: false,
     order: null,
+    previousStatus: '',
   })
 
   const fetchOrders = useCallback(async () => {
@@ -99,7 +100,7 @@ export function OrderManager() {
 
   const handleStatusChange = async (order: Order, newStatus: string) => {
     if (newStatus === 'cancelled' && order.status !== 'cancelled') {
-      setCancelDialog({ open: true, order: { ...order, status: newStatus } })
+      setCancelDialog({ open: true, order, previousStatus: order.status })
       return
     }
 
@@ -128,7 +129,7 @@ export function OrderManager() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           status: 'cancelled',
-          previousStatus: order.status,
+          previousStatus: cancelDialog.previousStatus,
           restoreStock,
         }),
       })
