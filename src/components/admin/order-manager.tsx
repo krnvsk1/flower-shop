@@ -240,21 +240,27 @@ export function OrderManager() {
                       {formatDate(order.createdAt)}
                     </TableCell>
                     <TableCell className="text-right">
-                      <Select
-                        value={order.status}
-                        onValueChange={(v) => handleStatusChange(order, v)}
-                      >
-                        <SelectTrigger className="w-[140px] h-8 text-xs ml-auto">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {STATUSES.map((s) => (
-                            <SelectItem key={s.value} value={s.value}>
-                              {s.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      {order.status === 'cancelled' ? (
+                        <Badge variant="secondary" className="bg-rose-100 text-rose-700 font-medium">
+                          Отменён
+                        </Badge>
+                      ) : (
+                        <Select
+                          value={order.status}
+                          onValueChange={(v) => handleStatusChange(order, v)}
+                        >
+                          <SelectTrigger className="w-[140px] h-8 text-xs ml-auto">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {STATUSES.map((s) => (
+                              <SelectItem key={s.value} value={s.value}>
+                                {s.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))
