@@ -13,7 +13,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import { Separator } from '@/components/ui/separator'
-import { Flower2, LayoutDashboard, ShoppingCart, PackageX, ChevronLeft, ChevronRight, LogOut } from 'lucide-react'
+import { Flower2, LayoutDashboard, ShoppingCart, PackageX, PanelLeftClose, PanelLeftOpen, LogOut } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const SESSION_KEY = 'flower_admin_auth'
@@ -47,45 +47,41 @@ function AdminContent() {
           collapsed ? 'w-[68px]' : 'w-[240px]'
         )}
       >
-        {/* Top: Logo + Collapse arrow */}
-        <div className="flex items-center justify-between px-3 h-14 border-b flex-shrink-0 gap-1">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-8 h-8 rounded-lg bg-rose-100 flex items-center justify-center flex-shrink-0">
-              <Flower2 className="w-4 h-4 text-rose-600" />
-            </div>
-            <AnimatePresence mode="wait">
-              {!collapsed && (
-                <motion.span
-                  initial={{ opacity: 0, width: 0 }}
-                  animate={{ opacity: 1, width: 'auto' }}
-                  exit={{ opacity: 0, width: 0 }}
-                  className="text-sm font-bold text-foreground whitespace-nowrap overflow-hidden"
-                >
-                  Админ
-                </motion.span>
-              )}
-            </AnimatePresence>
-          </div>
-
-          {/* Collapse toggle — always visible at top */}
+        {/* Top: Logo+Arrow combined */}
+        <div className="flex items-center px-3 h-14 border-b flex-shrink-0">
           <button
             onClick={() => setCollapsed((c) => !c)}
             className={cn(
-              'flex-shrink-0 rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors cursor-pointer',
-              collapsed && 'mx-auto'
+              'flex items-center gap-2 rounded-lg transition-colors cursor-pointer flex-shrink-0',
+              collapsed ? 'p-2 mx-auto hover:bg-muted' : 'px-2 py-1.5 hover:bg-muted'
             )}
           >
+            <div className="w-8 h-8 rounded-lg bg-rose-100 flex items-center justify-center flex-shrink-0">
+              <Flower2 className="w-4 h-4 text-rose-600" />
+            </div>
             {collapsed ? (
               <Tooltip delayDuration={0}>
                 <TooltipTrigger asChild>
-                  <ChevronRight className="w-4 h-4" />
+                  <PanelLeftOpen className="w-4 h-4 text-muted-foreground" />
                 </TooltipTrigger>
                 <TooltipContent side="right" sideOffset={10}>
                   Развернуть
                 </TooltipContent>
               </Tooltip>
             ) : (
-              <ChevronLeft className="w-4 h-4" />
+              <>
+                <AnimatePresence mode="wait">
+                  <motion.span
+                    initial={{ opacity: 0, width: 0 }}
+                    animate={{ opacity: 1, width: 'auto' }}
+                    exit={{ opacity: 0, width: 0 }}
+                    className="text-sm font-bold text-foreground whitespace-nowrap overflow-hidden"
+                  >
+                    Админ
+                  </motion.span>
+                </AnimatePresence>
+                <PanelLeftClose className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+              </>
             )}
           </button>
         </div>
