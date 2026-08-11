@@ -1,18 +1,34 @@
 'use client'
 
 import { useState } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 import { AdminAuth, AdminLogoutButton } from './admin-auth'
 import { Dashboard } from './dashboard'
 import { FlowerManager } from './flower-manager'
 import { OrderManager } from './order-manager'
 import { WriteOffManager } from './writeoff-manager'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Flower2, LayoutDashboard, ShoppingCart, PackageX } from 'lucide-react'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
+import { Flower2, LayoutDashboard, ShoppingCart, PackageX, ChevronLeft, ChevronRight, LogOut } from 'lucide-react'
+import { cn } from '@/lib/utils'
 
 const SESSION_KEY = 'flower_admin_auth'
 
+type TabKey = 'dashboard' | 'flowers' | 'orders' | 'writeoffs'
+
+const NAV_ITEMS: { key: TabKey; label: string; icon: typeof LayoutDashboard }[] = [
+  { key: 'dashboard', label: 'Панель управления', icon: LayoutDashboard },
+  { key: 'flowers', label: 'Товары', icon: Flower2 },
+  { key: 'orders', label: 'Заказы', icon: ShoppingCart },
+  { key: 'writeoffs', label: 'Списания', icon: PackageX },
+]
+
 function AdminContent() {
-  const [activeTab, setActiveTab] = useState('dashboard')
+  const [activeTab, setActiveTab] = useState<TabKey>('dashboard')
+  const [collapsed, setCollapsed] = useState(false)
 
   const handleLogout = () => {
     sessionStorage.removeItem(SESSION_KEY)
@@ -20,72 +36,150 @@ function AdminContent() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-background">
-      {/* Header */}
-      <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="container mx-auto flex items-center justify-between px-4 h-14">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-rose-100 flex items-center justify-center">
-              <Flower2 className="w-4 h-4 text-rose-600" />
-            </div>
-            <h1 className="text-lg font-bold text-foreground hidden sm:block">
-              Цветочный магазин{' '}
-              <span className="text-muted-foreground font-normal">— Админ</span>
-            </h1>
-            <h1 className="text-lg font-bold text-foreground sm:hidden">
-              Админ
-            </h1>
+    <div className="min-h-screen flex bg-background">
+      {/* Sidebar */}
+      <aside
+        className={cn(
+          'sticky top-0 h-screen flex flex-col border-r bg-background/95 backdrop-blur transition-all duration-300 z-50',
+          collapsed ? 'w-[68px]' : 'w-[240px]'
+        )}
+      >
+        {/* Logo */}
+        <div className="flex items-center gap-2.5 px-4 h-14 border-b flex-shrink-0">
+          <div className="w-8 h-8 rounded-lg bg-rose-100 flex items-center justify-center flex-shrink-0">
+            <Flower2 className="w-4 h-4 text-rose-600" />
           </div>
-          <AdminLogoutButton onLogout={handleLogout} />
+          <AnimatePresence mode="wait">
+            {!collapsed && (
+              <motion.span
+                initial={{ opacity: 0, width: 0 }}
+                animate={{ opacity: 1, width: 'auto' }}
+                exit={{ opacity: 0, width: 0 }}
+                className="text-sm font-bold text-foreground whitespace-nowrap overflow-hidden"
+              >
+                Админ-панель
+              </motion.span>
+            )}
+          </AnimatePresence>
         </div>
-      </header>
+
+        {/* Nav items */}
+        <nav className="flex-1 flex flex-col gap-1 px-3 py-4">
+          {NAV_ITEMS.map((item) => {
+            const Icon = item.icon
+            const isActive = activeTab === item.key
+
+            const button = (
+              <button
+                key={item.key}
+                onClick={() => setActiveTab(item.key)}
+                className={cn(
+                  'w-full flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200 cursor-pointer',
+                  isActive
+                    ? 'bg-rose-100 text-rose-700 shadow-sm'
+                    : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                )}
+              >
+                <Icon className={cn('w-5 h-5 flex-shrink-0', isActive && 'text-rose-600')} />
+                <AnimatePresence mode="wait">
+                  {!collapsed && (
+                    <motion.span
+                      initial={{ opacity: 0, width: 0 }}
+                      animate={{ opacity: 1, width: 'auto' }}
+                      exit={{ opacity: 0, width: 0 }}
+                      className="whitespace-nowrap overflow-hidden"
+                    >
+                      {item.label}
+                    </motion.span>
+                  )}
+                </AnimatePresence>
+              </button>
+            )
+
+            if (collapsed) {
+              return (
+                <Tooltip key={item.key} delayDuration={0}>
+                  <TooltipTrigger asChild>
+                    {button}
+                  </TooltipTrigger>
+                  <TooltipContent side="right" sideOffset={10}>
+                    {item.label}
+                  </TooltipContent>
+                </Tooltip>
+              )
+            }
+
+            return button
+          })}
+        </nav>
+
+        {/* Bottom section: collapse toggle + logout */}
+        <div className="border-t px-3 py-3 flex flex-col gap-1 flex-shrink-0">
+          {/* Collapse toggle */}
+          <button
+            onClick={() => setCollapsed((c) => !c)}
+            className="w-full flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-muted-foreground hover:bg-muted hover:text-foreground transition-colors cursor-pointer"
+          >
+            {collapsed ? (
+              <ChevronRight className="w-5 h-5 flex-shrink-0" />
+            ) : (
+              <>
+                <ChevronLeft className="w-5 h-5 flex-shrink-0" />
+                <motion.span
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="whitespace-nowrap"
+                >
+                  Свернуть
+                </motion.span>
+              </>
+            )}
+          </button>
+
+          {/* Logout */}
+          {collapsed ? (
+            <Tooltip delayDuration={0}>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={handleLogout}
+                  className="w-full flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-muted-foreground hover:bg-rose-50 hover:text-rose-600 transition-colors cursor-pointer"
+                >
+                  <LogOut className="w-5 h-5 flex-shrink-0" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="right" sideOffset={10}>
+                Выйти
+              </TooltipContent>
+            </Tooltip>
+          ) : (
+            <button
+              onClick={handleLogout}
+              className="w-full flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-muted-foreground hover:bg-rose-50 hover:text-rose-600 transition-colors cursor-pointer"
+            >
+              <LogOut className="w-5 h-5 flex-shrink-0" />
+              <span className="whitespace-nowrap">Выйти</span>
+            </button>
+          )}
+        </div>
+      </aside>
 
       {/* Main Content */}
-      <main className="flex-1 container mx-auto px-4 py-6">
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="mb-6 flex-wrap h-auto gap-1">
-            <TabsTrigger value="dashboard" className="cursor-pointer">
-              <LayoutDashboard className="w-4 h-4 mr-1.5" />
-              Панель управления
-            </TabsTrigger>
-            <TabsTrigger value="flowers" className="cursor-pointer">
-              <Flower2 className="w-4 h-4 mr-1.5" />
-              Товары
-            </TabsTrigger>
-            <TabsTrigger value="orders" className="cursor-pointer">
-              <ShoppingCart className="w-4 h-4 mr-1.5" />
-              Заказы
-            </TabsTrigger>
-            <TabsTrigger value="writeoffs" className="cursor-pointer">
-              <PackageX className="w-4 h-4 mr-1.5" />
-              Списания
-            </TabsTrigger>
-          </TabsList>
+      <div className="flex-1 flex flex-col min-h-screen">
+        <main className="flex-1 p-6">
+          {activeTab === 'dashboard' && <Dashboard />}
+          {activeTab === 'flowers' && <FlowerManager />}
+          {activeTab === 'orders' && <OrderManager />}
+          {activeTab === 'writeoffs' && <WriteOffManager />}
+        </main>
 
-          <TabsContent value="dashboard">
-            <Dashboard />
-          </TabsContent>
-
-          <TabsContent value="flowers">
-            <FlowerManager />
-          </TabsContent>
-
-          <TabsContent value="orders">
-            <OrderManager />
-          </TabsContent>
-
-          <TabsContent value="writeoffs">
-            <WriteOffManager />
-          </TabsContent>
-        </Tabs>
-      </main>
-
-      {/* Footer */}
-      <footer className="border-t py-4 mt-auto">
-        <div className="container mx-auto px-4 text-center text-sm text-muted-foreground">
-          Цветочный магазин — Панель администратора
-        </div>
-      </footer>
+        {/* Footer */}
+        <footer className="border-t py-4 mt-auto">
+          <div className="px-6 text-center text-sm text-muted-foreground">
+            Цветочный магазин — Панель администратора
+          </div>
+        </footer>
+      </div>
     </div>
   )
 }
