@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { AdminAuth, AdminLogoutButton } from './admin-auth'
+import { AdminAuth } from './admin-auth'
 import { Dashboard } from './dashboard'
 import { FlowerManager } from './flower-manager'
 import { OrderManager } from './order-manager'
@@ -12,6 +12,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
+import { Separator } from '@/components/ui/separator'
 import { Flower2, LayoutDashboard, ShoppingCart, PackageX, ChevronLeft, ChevronRight, LogOut } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -19,11 +20,11 @@ const SESSION_KEY = 'flower_admin_auth'
 
 type TabKey = 'dashboard' | 'flowers' | 'orders' | 'writeoffs'
 
-const NAV_ITEMS: { key: TabKey; label: string; icon: typeof LayoutDashboard }[] = [
-  { key: 'dashboard', label: 'Панель управления', icon: LayoutDashboard },
-  { key: 'flowers', label: 'Товары', icon: Flower2 },
-  { key: 'orders', label: 'Заказы', icon: ShoppingCart },
-  { key: 'writeoffs', label: 'Списания', icon: PackageX },
+const NAV_ITEMS: { key: TabKey; label: string; description: string; icon: typeof LayoutDashboard }[] = [
+  { key: 'dashboard', label: 'Панель управления', description: 'Общая статистика магазина', icon: LayoutDashboard },
+  { key: 'flowers', label: 'Товары', description: 'Управление ассортиментом цветов', icon: Flower2 },
+  { key: 'orders', label: 'Заказы', description: 'Обработка и отслеживание заказов', icon: ShoppingCart },
+  { key: 'writeoffs', label: 'Списания', description: 'Учёт испорченных товаров', icon: PackageX },
 ]
 
 function AdminContent() {
@@ -35,6 +36,8 @@ function AdminContent() {
     window.location.reload()
   }
 
+  const currentNav = NAV_ITEMS.find((n) => n.key === activeTab)!
+
   return (
     <div className="min-h-screen flex bg-background">
       {/* Sidebar */}
@@ -44,23 +47,47 @@ function AdminContent() {
           collapsed ? 'w-[68px]' : 'w-[240px]'
         )}
       >
-        {/* Logo */}
-        <div className="flex items-center gap-2.5 px-4 h-14 border-b flex-shrink-0">
-          <div className="w-8 h-8 rounded-lg bg-rose-100 flex items-center justify-center flex-shrink-0">
-            <Flower2 className="w-4 h-4 text-rose-600" />
+        {/* Top: Logo + Collapse arrow */}
+        <div className="flex items-center justify-between px-3 h-14 border-b flex-shrink-0 gap-1">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-8 h-8 rounded-lg bg-rose-100 flex items-center justify-center flex-shrink-0">
+              <Flower2 className="w-4 h-4 text-rose-600" />
+            </div>
+            <AnimatePresence mode="wait">
+              {!collapsed && (
+                <motion.span
+                  initial={{ opacity: 0, width: 0 }}
+                  animate={{ opacity: 1, width: 'auto' }}
+                  exit={{ opacity: 0, width: 0 }}
+                  className="text-sm font-bold text-foreground whitespace-nowrap overflow-hidden"
+                >
+                  Админ
+                </motion.span>
+              )}
+            </AnimatePresence>
           </div>
-          <AnimatePresence mode="wait">
-            {!collapsed && (
-              <motion.span
-                initial={{ opacity: 0, width: 0 }}
-                animate={{ opacity: 1, width: 'auto' }}
-                exit={{ opacity: 0, width: 0 }}
-                className="text-sm font-bold text-foreground whitespace-nowrap overflow-hidden"
-              >
-                Админ-панель
-              </motion.span>
+
+          {/* Collapse toggle — always visible at top */}
+          <button
+            onClick={() => setCollapsed((c) => !c)}
+            className={cn(
+              'flex-shrink-0 rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors cursor-pointer',
+              collapsed && 'mx-auto'
             )}
-          </AnimatePresence>
+          >
+            {collapsed ? (
+              <Tooltip delayDuration={0}>
+                <TooltipTrigger asChild>
+                  <ChevronRight className="w-4 h-4" />
+                </TooltipTrigger>
+                <TooltipContent side="right" sideOffset={10}>
+                  Развернуть
+                </TooltipContent>
+              </Tooltip>
+            ) : (
+              <ChevronLeft className="w-4 h-4" />
+            )}
+          </button>
         </div>
 
         {/* Nav items */}
@@ -113,37 +140,14 @@ function AdminContent() {
           })}
         </nav>
 
-        {/* Bottom section: collapse toggle + logout */}
-        <div className="border-t px-3 py-3 flex flex-col gap-1 flex-shrink-0">
-          {/* Collapse toggle */}
-          <button
-            onClick={() => setCollapsed((c) => !c)}
-            className="w-full flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-muted-foreground hover:bg-muted hover:text-foreground transition-colors cursor-pointer"
-          >
-            {collapsed ? (
-              <ChevronRight className="w-5 h-5 flex-shrink-0" />
-            ) : (
-              <>
-                <ChevronLeft className="w-5 h-5 flex-shrink-0" />
-                <motion.span
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  className="whitespace-nowrap"
-                >
-                  Свернуть
-                </motion.span>
-              </>
-            )}
-          </button>
-
-          {/* Logout */}
+        {/* Bottom: Logout */}
+        <div className="border-t px-3 py-3 flex-shrink-0">
           {collapsed ? (
             <Tooltip delayDuration={0}>
               <TooltipTrigger asChild>
                 <button
                   onClick={handleLogout}
-                  className="w-full flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-muted-foreground hover:bg-rose-50 hover:text-rose-600 transition-colors cursor-pointer"
+                  className="w-full flex items-center justify-center rounded-lg px-3 py-2 text-sm text-muted-foreground hover:bg-rose-50 hover:text-rose-600 transition-colors cursor-pointer"
                 >
                   <LogOut className="w-5 h-5 flex-shrink-0" />
                 </button>
@@ -166,6 +170,32 @@ function AdminContent() {
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col min-h-screen">
+        {/* Page header */}
+        <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur">
+          <div className="px-6 py-4 flex items-center gap-3">
+            <div className={cn(
+              'w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0',
+              activeTab === 'dashboard' && 'bg-rose-100',
+              activeTab === 'flowers' && 'bg-emerald-100',
+              activeTab === 'orders' && 'bg-amber-100',
+              activeTab === 'writeoffs' && 'bg-rose-100',
+            )}>
+              <currentNav.icon className={cn(
+                'w-5 h-5',
+                activeTab === 'dashboard' && 'text-rose-600',
+                activeTab === 'flowers' && 'text-emerald-600',
+                activeTab === 'orders' && 'text-amber-600',
+                activeTab === 'writeoffs' && 'text-rose-600',
+              )} />
+            </div>
+            <div>
+              <h1 className="text-lg font-bold text-foreground">{currentNav.label}</h1>
+              <p className="text-sm text-muted-foreground">{currentNav.description}</p>
+            </div>
+          </div>
+        </header>
+
+        {/* Page content */}
         <main className="flex-1 p-6">
           {activeTab === 'dashboard' && <Dashboard />}
           {activeTab === 'flowers' && <FlowerManager />}
