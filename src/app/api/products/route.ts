@@ -1,4 +1,5 @@
-// This file can be empty for now, or you can add additional functionality later.
-// Don't forget to ensure your project structure fits the Next.js model, as appropriate.
+import { NextResponse } from 'next/server'
 
-export default {};
+export async function GET() {
+  return NextResponse.json([])
+}

@@ -12,11 +12,11 @@ import type { CartItem } from '@/store/cart-store';
 export interface Flower {
   id: string;
   name: string;
-  description: string;
+  description: string | null;
   price: number;
   stock: number;
   imageUrl?: string | null;
-  category: string;
+  category: string | null;
 }
 
 interface FlowerCardProps {
@@ -24,6 +24,15 @@ interface FlowerCardProps {
 }
 
 const FLOWER_EMOJIS: Record<string, string> = {
+  Розы: '🌹',
+  Тюльпаны: '🌷',
+  Лилии: '🌸',
+  Гвоздики: '🏵️',
+  Хризантемы: '🌼',
+  Орхидеи: '🪻',
+  Сезонные: '🌻',
+  Композиции: '💐',
+  Другое: '🌸',
   Roses: '🌹',
   Tulips: '🌷',
   Lilies: '🌸',
@@ -39,7 +48,7 @@ const FALLBACK_EMOJI = '💐';
 export function FlowerCard({ flower }: FlowerCardProps) {
   const addItem = useCartStore((s) => s.addItem);
 
-  const emoji = FLOWER_EMOJIS[flower.category] || FALLBACK_EMOJI;
+  const emoji = (flower.category && FLOWER_EMOJIS[flower.category]) || FALLBACK_EMOJI;
   const inStock = flower.stock > 0;
 
   const handleAddToCart = () => {
@@ -51,7 +60,7 @@ export function FlowerCard({ flower }: FlowerCardProps) {
       imageUrl: flower.imageUrl,
     };
     addItem(cartItem);
-    toast.success(`${flower.name} added to cart`);
+    toast.success(`${flower.name} добавлен в корзину`);
   };
 
   return (
@@ -77,7 +86,7 @@ export function FlowerCard({ flower }: FlowerCardProps) {
             variant="secondary"
             className="absolute top-2 left-2 bg-white/90 text-slate-700 border-slate-200 text-xs backdrop-blur-sm"
           >
-            {flower.category}
+            {flower.category || 'Цветы'}
           </Badge>
         </div>
 

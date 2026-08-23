@@ -1,12 +1,11 @@
 'use client';
 
-import { useState, useCallback, useSyncExternalStore } from 'react';
+import { useState, useSyncExternalStore } from 'react';
 import { FlowerGrid } from '@/components/store/flower-grid';
 import { StoreHeader } from '@/components/store/store-header';
 import { CartDrawer } from '@/components/store/cart-drawer';
 import { CheckoutDialog } from '@/components/store/checkout-dialog';
 import { AdminPanel } from '@/components/admin/admin-panel';
-import { Button } from '@/components/ui/button';
 import { Shield } from 'lucide-react';
 
 const SESSION_KEY = 'flower_admin_auth';

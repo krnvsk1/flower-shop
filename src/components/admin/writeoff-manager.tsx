@@ -167,7 +167,7 @@ export function WriteOffManager() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="space-y-2 sm:col-span-2">
             <Label>Цветок *</Label>
-            <Select value={selectedFlower} onValueChange={setSelectedFlower}>
+            <Select value={selectedFlower || undefined} onValueChange={setSelectedFlower}>
               <SelectTrigger>
                 <SelectValue placeholder="Выберите цветок" />
               </SelectTrigger>

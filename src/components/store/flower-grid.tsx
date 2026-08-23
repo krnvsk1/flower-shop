@@ -12,7 +12,7 @@ export function FlowerGrid() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeCategory, setActiveCategory] = useState('All');
+  const [activeCategory, setActiveCategory] = useState('Все');
 
   useEffect(() => {
     const fetchFlowers = async () => {
@@ -32,14 +32,18 @@ export function FlowerGrid() {
   }, []);
 
   const categories = useMemo(() => {
-    const cats = new Set(flowers.map((f) => f.category));
-    return ['All', ...Array.from(cats).sort()];
+    const cats = new Set(
+      flowers
+        .map((f) => f.category)
+        .filter((category): category is string => Boolean(category))
+    );
+    return ['Все', ...Array.from(cats).sort()];
   }, [flowers]);
 
   const filteredFlowers = useMemo(() => {
     return flowers.filter((f) => {
       const matchesCategory =
-        activeCategory === 'All' || f.category === activeCategory;
+        activeCategory === 'Все' || f.category === activeCategory;
       const matchesSearch =
         searchQuery.trim() === '' ||
         f.name.toLowerCase().includes(searchQuery.toLowerCase());
@@ -109,12 +113,12 @@ export function FlowerGrid() {
         <div className="flex flex-col items-center justify-center py-20 text-center">
           <Flower2 className="w-12 h-12 text-slate-300 mb-4" />
           <p className="text-slate-500 text-lg">
-            {searchQuery || activeCategory !== 'All'
+            {searchQuery || activeCategory !== 'Все'
               ? 'Ничего не найдено'
               : 'Каталог пока пуст'}
           </p>
           <p className="text-slate-400 text-sm mt-1">
-            {searchQuery || activeCategory !== 'All'
+            {searchQuery || activeCategory !== 'Все'
               ? 'Попробуйте изменить параметры поиска'
               : 'Скоро здесь появятся цветы'}
           </p>

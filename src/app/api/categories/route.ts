@@ -1,3 +1,5 @@
-// Route file for categories will be added here if needed in the future.
+import { NextResponse } from 'next/server'
 
-export default {};
+export async function GET() {
+  return NextResponse.json([])
+}

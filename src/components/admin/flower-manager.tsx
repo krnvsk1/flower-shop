@@ -31,7 +31,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Plus, Pencil, Trash2, Eye, EyeOff, RefreshCw } from 'lucide-react'
+import { Plus, Pencil, Trash2, Eye, EyeOff } from 'lucide-react'
 
 type Flower = {
   id: string
@@ -73,6 +73,7 @@ export function FlowerManager() {
   const [saving, setSaving] = useState(false)
   const [form, setForm] = useState(emptyForm)
   const [editingId, setEditingId] = useState<string | null>(null)
+  const [tab, setTab] = useState('list')
   const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; flower: Flower | null }>({
     open: false,
     flower: null,
@@ -96,7 +97,7 @@ export function FlowerManager() {
   }, [fetchFlowers])
 
   const handleSubmit = async () => {
-    if (!form.name.trim() || !form.price || !form.stock) {
+    if (!form.name.trim() || form.price === '' || form.stock === '') {
       toast.error('Заполните название, цену и остаток')
       return
     }
@@ -122,6 +123,7 @@ export function FlowerManager() {
           toast.success('Товар обновлён')
           setEditingId(null)
           setForm(emptyForm)
+          setTab('list')
         } else {
           toast.error('Ошибка обновления')
         }
@@ -134,6 +136,7 @@ export function FlowerManager() {
         if (res.ok) {
           toast.success('Товар добавлен')
           setForm(emptyForm)
+          setTab('list')
         } else {
           toast.error('Ошибка добавления')
         }
@@ -189,17 +192,19 @@ export function FlowerManager() {
       imageUrl: flower.imageUrl ?? '',
       category: flower.category ?? '',
     })
+    setTab('add')
   }
 
   const handleCancelEdit = () => {
     setEditingId(null)
     setForm(emptyForm)
+    setTab('list')
   }
 
   const isEditing = editingId !== null
 
   return (
-    <Tabs defaultValue="list">
+    <Tabs value={tab} onValueChange={setTab}>
       <TabsList className="mb-4">
         <TabsTrigger value="list" className="cursor-pointer">
           Все товары
@@ -368,7 +373,7 @@ export function FlowerManager() {
             <div className="space-y-2">
               <Label htmlFor="flower-category">Категория</Label>
               <Select
-                value={form.category}
+                value={form.category || undefined}
                 onValueChange={(v) => setForm((p) => ({ ...p, category: v }))}
               >
                 <SelectTrigger id="flower-category">

@@ -34,12 +34,6 @@ export function AdminAuth({ children }: { children: ReactNode }) {
     }, 300)
   }
 
-  const handleLogout = () => {
-    sessionStorage.removeItem(SESSION_KEY)
-    setIsAuthenticated(false)
-    setPassword('')
-  }
-
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') handleLogin()
   }
@@ -87,9 +81,6 @@ export function AdminAuth({ children }: { children: ReactNode }) {
   return <>{children}</>
 }
 
-export { handleLogout as adminLogout }
-
-// Re-export a logout trigger component
 export function AdminLogoutButton({ onLogout }: { onLogout: () => void }) {
   return (
     <Button

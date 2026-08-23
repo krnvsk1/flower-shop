@@ -201,22 +201,18 @@ export function CheckoutDialog({ open, onOpenChange }: CheckoutDialogProps) {
         </div>
 
         <DialogFooter className="gap-2 sm:gap-0">
-<Button
-             variant="outline"
-             className="text-lg"
-
+          <Button
+            variant="outline"
             onClick={() => onOpenChange(false)}
             disabled={submitting}
-            className="border-slate-200 text-slate-600"
+            className="border-slate-200 text-slate-600 text-lg"
           >
             Отмена
           </Button>
-<Button
-  className="text-lg"
-
+          <Button
             onClick={handleSubmit}
             disabled={submitting}
-            className="bg-rose-500 hover:bg-rose-600 text-white cursor-pointer"
+            className="bg-rose-500 hover:bg-rose-600 text-white cursor-pointer text-lg"
           >
             {submitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
             {submitting ? 'Оформляем...' : 'Подтвердить заказ'}
