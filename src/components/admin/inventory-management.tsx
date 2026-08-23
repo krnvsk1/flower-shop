@@ -102,15 +102,7 @@ const deleteProduct = async (id: string) => {
         </thead>
         <tbody>
           {products.map((product) => (
-            <tr key={product.id}>
-              <td>{product.name}</td>
-              <td>{product.price} ₽</td>
-              <td>{product.stock}</td>
-              <td>
-                <Button onClick={() => {setSelectedProduct(product); setEditDialogOpen(true);}}>Редактировать</Button>
-                <Button onClick={() => deleteProduct(product.id)}>Удалить</Button>
-              </td>
-            </tr>
+               </tr>
             <tr key={product.id}>
               <td>{product.name}</td>
               <td>{product.price} ₽</td>
