@@ -92,8 +92,8 @@ const deleteProduct = async (id: string) => {
             </tr>
               <td className="font-semibold text-lg mb-2">{product.name}</td>
               <td className="text-sm text-slate-500">{product.description}</td>
-              <p className="text-lg font-bold text-rose-600">{product.price} ₽</p>
-              <p className="text-sm">В наличии: {product.stock}</p>
+              <td className="text-lg font-bold text-rose-600">{product.price} ₽</td>
+              <td className="text-sm">В наличии: {product.stock}</td>
               <div className="flex justify-between mt-4">
                 <Button onClick={() => {
                   setSelectedProduct(product);
