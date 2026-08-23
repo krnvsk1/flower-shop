@@ -129,7 +129,7 @@ const deleteProduct = async (id: string) => {
         <tbody>
             {products.map((product) => (
               <tr key={product.id}>
-                <td className="font-semibold text-lg mb-2">{product.name}</td>
+                <td className="font-semibold text-lg">{product.name}</td>
                 <td className="text-sm text-slate-500">{product.description}</td>
                 <td className="text-lg font-bold text-rose-600">{product.price} ₽</td>
                 <td className="text-sm">В наличии: {product.stock}</td>
@@ -145,6 +145,7 @@ const deleteProduct = async (id: string) => {
                 </td>
               </tr>
             ))}
+          </tbody>
           </tbody>
               <tr key={product.id}>
                 <td className="font-semibold text-lg mb-2">{product.name}</td>
