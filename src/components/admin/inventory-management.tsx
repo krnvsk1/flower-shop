@@ -6,6 +6,7 @@ import { Table } from '@/components/ui/table';
 import { useCartStore } from '@/store/cart-store';
 import { Flower } from './flower-card';
 import { notifySuccess, logChange } from '@/components/ui/notification-service';
+import { notifySuccess, logChange } from '@/components/ui/notification-service';
 
 export function InventoryManagement() {
   const [products, setProducts] = useState<Flower[]>([]);
@@ -13,6 +14,8 @@ export function InventoryManagement() {
   const [newProduct, setNewProduct] = useState<Flower>({ id: '', name: '', description: '', price: 0, stock: 0, category: '', imageUrl: '' });
 
   const fetchProducts = async () => {
+    setLoading(true);
+    const response = await fetch('/api/products');
     try {
       const response = await fetch('/api/products'); // API для получения списка товаров
       const data = await response.json();
@@ -50,9 +53,9 @@ const deleteProduct = async (id: string) => {
 
     setProductToDelete(id);
     setDeleteDialogOpen(true);
-    return;
-
+setLoading(true);
     await fetch(`/api/products/${id}`, { method: 'DELETE' });
+    fetchProducts();
     fetchProducts(); // Обновляем список товаров
   };
 
