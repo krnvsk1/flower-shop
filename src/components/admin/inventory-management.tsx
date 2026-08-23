@@ -32,7 +32,17 @@ export function InventoryManagement() {
     }
   };
 
-  const deleteProduct = async (id: string) => {
+  const [isEditDialogOpen, setEditDialogOpen] = useState(false);
+const [selectedProduct, setSelectedProduct] = useState<Flower | null>(null);
+
+const [isDeleteDialogOpen, setDeleteDialogOpen] = useState(false);
+const [productToDelete, setProductToDelete] = useState<string | null>(null);
+
+const deleteProduct = async (id: string) => {
+    setProductToDelete(id);
+    setDeleteDialogOpen(true);
+    return;
+
     await fetch(`/api/products/${id}`, { method: 'DELETE' });
     fetchProducts(); // Обновляем список товаров
   };
@@ -43,7 +53,7 @@ export function InventoryManagement() {
 
   return (
     <div className="p-4">
-      <h2 className="text-lg font-bold mb-4">Управление запасами</h2>
+      <EditProductDialog open={isEditDialogOpen} onOpenChange={setEditDialogOpen} product={selectedProduct} onUpdate={fetchProducts} />      <h2 className="text-lg font-bold mb-4">Управление запасами</h2>
       <div className="mb-4">
         <h3 className="text-md font-semibold">Добавить новый товар</h3>
         <Input placeholder="Название" value={newProduct.name} onChange={(e) => setNewProduct({...newProduct, name: e.target.value})} />
@@ -53,7 +63,8 @@ export function InventoryManagement() {
         <Input placeholder="Категория" value={newProduct.category} onChange={(e) => setNewProduct({...newProduct, category: e.target.value})} />
         <Button onClick={addProduct}>Добавить товар</Button>
       </div>
-      <Table>
+      <ConfirmDeleteDialog open={isDeleteDialogOpen} onOpenChange={setDeleteDialogOpen} onConfirm={() => deleteConfirmed(productToDelete)} />
+<Table>
         <thead>
           <tr>
             <th>Название</th>
@@ -69,7 +80,19 @@ export function InventoryManagement() {
               <td>{product.price} ₽</td>
               <td>{product.stock}</td>
               <td>
+                <Button onClick={() => {setSelectedProduct(product); setEditDialogOpen(true);}}>Редактировать</Button>
                 <Button onClick={() => deleteProduct(product.id)}>Удалить</Button>
+              </td>
+            </tr>
+            <tr key={product.id}>
+              <td>{product.name}</td>
+              <td>{product.price} ₽</td>
+              <td>{product.stock}</td>
+              <td>
+                <Button onClick={() => {
+                    setProductToDelete(product.id);
+                    setDeleteDialogOpen(true);
+                }}>Удалить</Button>
               </td>
             </tr>
           ))}

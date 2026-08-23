@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { AdminAuth } from './admin-auth'
-import { Dashboard } from './dashboard'
+import { Analytics } from './analytics';
 import { FlowerManager } from './flower-manager'
 import { InventoryManagement } from './inventory-management'
 import { OrderManager } from './order-manager'
@@ -22,6 +22,9 @@ const SESSION_KEY = 'flower_admin_auth'
 type TabKey = 'dashboard' | 'flowers' | 'orders' | 'writeoffs'
 
 const NAV_ITEMS: { key: TabKey; label: string; description: string; icon: typeof LayoutDashboard }[] = [
+  { key: 'analytics', label: 'Аналитика', description: 'Статистика по продажам', icon: LayoutDashboard },
+  { key: 'dashboard', label: 'Панель управления', description: 'Общая статистика магазина', icon: LayoutDashboard },
+
   { key: 'dashboard', label: 'Панель управления', description: 'Общая статистика магазина', icon: LayoutDashboard },
   { key: 'inventory', label: 'Запасы', description: 'Управление запасами товаров', icon: PackageX },
    { key: 'flowers', label: 'Товары', description: 'Управление ассортиментом цветов', icon: Flower2 },
@@ -195,7 +198,7 @@ function AdminContent() {
 
         {/* Page content */}
         <main className="flex-1 p-6">
-          {activeTab === 'dashboard' && <Dashboard />}
+          {activeTab === 'analytics' && <Analytics />}
           {activeTab === 'flowers' && <FlowerManager />}
            {activeTab === 'inventory' && <InventoryManagement />}
           {activeTab === 'orders' && <OrderManager />}
