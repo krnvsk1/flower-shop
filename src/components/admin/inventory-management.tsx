@@ -21,6 +21,8 @@ export function InventoryManagement() {
   };
 
   const addProduct = async () => {
+    logChange('added', newProduct.id);
+
     const response = await fetch('/api/products', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -39,6 +41,8 @@ const [isDeleteDialogOpen, setDeleteDialogOpen] = useState(false);
 const [productToDelete, setProductToDelete] = useState<string | null>(null);
 
 const deleteProduct = async (id: string) => {
+    await logChange('deleted', id);
+
     setProductToDelete(id);
     setDeleteDialogOpen(true);
     return;

@@ -22,7 +22,8 @@ const SESSION_KEY = 'flower_admin_auth'
 type TabKey = 'dashboard' | 'flowers' | 'orders' | 'writeoffs'
 
 const NAV_ITEMS: { key: TabKey; label: string; description: string; icon: typeof LayoutDashboard }[] = [
-  { key: 'analytics', label: 'Аналитика', description: 'Статистика по продажам', icon: LayoutDashboard },
+  { key: 'changes', label: 'История изменений', description: 'Отслеживание изменений товаров', icon: PackageX },
+  { key: 'analytics', label: 'Аналитика', description: 'Статистика по продажам', icon: LayoutDashboard },,
   { key: 'dashboard', label: 'Панель управления', description: 'Общая статистика магазина', icon: LayoutDashboard },
 
   { key: 'dashboard', label: 'Панель управления', description: 'Общая статистика магазина', icon: LayoutDashboard },
@@ -199,7 +200,7 @@ function AdminContent() {
 
         {/* Page content */}
         <main className="flex-1 p-6">
-          {activeTab === 'analytics' && <Analytics />}
+          {activeTab === 'changes' && <ChangesManagement />}
           {activeTab === 'categories' && <CategoryManagement />}
            {activeTab === 'inventory' && <InventoryManagement />}
           {activeTab === 'orders' && <OrderManager />}
