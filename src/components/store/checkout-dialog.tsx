@@ -125,7 +125,7 @@ export function CheckoutDialog({ open, onOpenChange }: CheckoutDialogProps) {
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex flex-col gap-4 py-2">
+        <div className="flex flex-col gap-4 py-2 md:gap-6">
           {/* Name field */}
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="checkout-name" className="text-slate-700">
@@ -139,7 +139,7 @@ export function CheckoutDialog({ open, onOpenChange }: CheckoutDialogProps) {
                 setName(e.target.value);
                 if (errors.name) setErrors((prev) => ({ ...prev, name: undefined }));
               }}
-              className={errors.name ? 'border-red-400 focus-visible:ring-red-400' : 'border-slate-200 focus-visible:ring-rose-500'}
+              className={errors.name ? 'border-red-400 focus-visible:ring-red-400 md:text-lg' : 'border-slate-200 focus-visible:ring-rose-500 md:text-lg'}
               disabled={submitting}
             />
             {errors.name && (
@@ -160,7 +160,7 @@ export function CheckoutDialog({ open, onOpenChange }: CheckoutDialogProps) {
                 setPhone(e.target.value);
                 if (errors.phone) setErrors((prev) => ({ ...prev, phone: undefined }));
               }}
-              className={errors.phone ? 'border-red-400 focus-visible:ring-red-400' : 'border-slate-200 focus-visible:ring-rose-500'}
+              className={errors.phone ? 'border-red-400 focus-visible:ring-red-400 md:text-lg' : 'border-slate-200 focus-visible:ring-rose-500 md:text-lg'}
               disabled={submitting}
             />
             {errors.phone && (
@@ -201,15 +201,19 @@ export function CheckoutDialog({ open, onOpenChange }: CheckoutDialogProps) {
         </div>
 
         <DialogFooter className="gap-2 sm:gap-0">
-          <Button
-            variant="outline"
+<Button
+             variant="outline"
+             className="text-lg"
+
             onClick={() => onOpenChange(false)}
             disabled={submitting}
             className="border-slate-200 text-slate-600"
           >
             Отмена
           </Button>
-          <Button
+<Button
+  className="text-lg"
+
             onClick={handleSubmit}
             disabled={submitting}
             className="bg-rose-500 hover:bg-rose-600 text-white cursor-pointer"

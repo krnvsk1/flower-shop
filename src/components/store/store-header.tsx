@@ -22,10 +22,10 @@ export function StoreHeader({ onCartClick }: StoreHeaderProps) {
             <Flower2 className="w-5 h-5 text-white" />
           </div>
           <div className="flex flex-col">
-            <h1 className="text-lg font-bold text-slate-800 leading-tight tracking-tight">
+            <h1 className="text-lg font-bold text-slate-800 leading-tight tracking-tight md:text-xl">
               Цветочный магазин
             </h1>
-            <p className="text-[11px] text-slate-400 leading-tight hidden sm:block">
+            <p className="text-sm text-slate-400 leading-tight hidden sm:block md:text-base">
               Доставка цветов по городу
             </p>
           </div>
@@ -36,7 +36,7 @@ export function StoreHeader({ onCartClick }: StoreHeaderProps) {
           variant="ghost"
           size="icon"
           onClick={onCartClick}
-          className="relative text-slate-600 hover:text-rose-600 hover:bg-rose-50 rounded-full h-10 w-10 cursor-pointer"
+          className="relative text-slate-600 hover:text-rose-600 hover:bg-rose-50 rounded-full h-12 w-12 cursor-pointer"
           aria-label="Открыть корзину"
         >
           <ShoppingCart className="w-5 h-5" />

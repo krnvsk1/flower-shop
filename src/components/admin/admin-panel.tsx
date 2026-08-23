@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { AdminAuth } from './admin-auth'
 import { Dashboard } from './dashboard'
 import { FlowerManager } from './flower-manager'
+import { InventoryManagement } from './inventory-management'
 import { OrderManager } from './order-manager'
 import { WriteOffManager } from './writeoff-manager'
 import {
@@ -22,7 +23,8 @@ type TabKey = 'dashboard' | 'flowers' | 'orders' | 'writeoffs'
 
 const NAV_ITEMS: { key: TabKey; label: string; description: string; icon: typeof LayoutDashboard }[] = [
   { key: 'dashboard', label: 'Панель управления', description: 'Общая статистика магазина', icon: LayoutDashboard },
-  { key: 'flowers', label: 'Товары', description: 'Управление ассортиментом цветов', icon: Flower2 },
+  { key: 'inventory', label: 'Запасы', description: 'Управление запасами товаров', icon: PackageX },
+   { key: 'flowers', label: 'Товары', description: 'Управление ассортиментом цветов', icon: Flower2 },
   { key: 'orders', label: 'Заказы', description: 'Обработка и отслеживание заказов', icon: ShoppingCart },
   { key: 'writeoffs', label: 'Списания', description: 'Учёт испорченных товаров', icon: PackageX },
 ]
@@ -195,6 +197,7 @@ function AdminContent() {
         <main className="flex-1 p-6">
           {activeTab === 'dashboard' && <Dashboard />}
           {activeTab === 'flowers' && <FlowerManager />}
+           {activeTab === 'inventory' && <InventoryManagement />}
           {activeTab === 'orders' && <OrderManager />}
           {activeTab === 'writeoffs' && <WriteOffManager />}
         </main>

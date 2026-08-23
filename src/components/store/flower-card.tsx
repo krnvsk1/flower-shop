@@ -66,7 +66,7 @@ export function FlowerCard({ flower }: FlowerCardProps) {
             <img
               src={flower.imageUrl}
               alt={flower.name}
-              className="w-full h-full object-cover"
+              className="w-full h-full object-cover rounded-lg"
             />
           ) : (
             <span className="text-7xl select-none" role="img" aria-label={flower.name}>
@@ -82,14 +82,14 @@ export function FlowerCard({ flower }: FlowerCardProps) {
         </div>
 
         <CardContent className="flex-1 p-4 flex flex-col gap-2">
-          <h3 className="font-semibold text-slate-800 text-base leading-tight">
+          <h3 className="font-semibold text-slate-800 text-base leading-tight md:text-lg md:leading-relaxed">
             {flower.name}
           </h3>
-          <p className="text-sm text-slate-500 line-clamp-2 leading-relaxed">
+          <p className="text-sm text-slate-500 md:text-base md:line-clamp-3 leading-relaxed">
             {flower.description}
           </p>
           <div className="flex items-center justify-between mt-auto pt-1">
-            <span className="text-lg font-bold text-rose-600">
+            <span className="text-lg font-bold text-rose-600 md:text-xl">
               {flower.price.toLocaleString('ru-RU')} ₽
             </span>
             {inStock ? (
@@ -98,7 +98,7 @@ export function FlowerCard({ flower }: FlowerCardProps) {
                 В наличии: {flower.stock}
               </span>
             ) : (
-              <span className="text-xs text-slate-400 font-medium">Нет в наличии</span>
+              <span className="text-xs text-slate-400 font-medium md:text-sm">Нет в наличии</span>
             )}
           </div>
         </CardContent>
