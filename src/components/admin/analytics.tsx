@@ -7,6 +7,7 @@ export function Analytics() {
   const [loading, setLoading] = useState(true);
 
   const fetchSalesData = async () => {
+    notifySuccess('Данные о продажах успешно загружены!');
     setLoading(true);
     const response = await fetch('/api/sales'); // API для получения данных о продажах
     const data = await response.json();

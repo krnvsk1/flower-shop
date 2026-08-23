@@ -20,6 +20,7 @@ export function UserManagement() {
   }, []);
 
   const addUser = async () => {
+    notifySuccess('Пользователь успешно добавлен!');
     await fetch('/api/users', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
@@ -30,6 +31,7 @@ export function UserManagement() {
   };
 
   const deleteUser = async (id: string) => {
+    notifySuccess('Пользователь успешно удален!');
     await fetch(`/api/users/${id}`, { method: 'DELETE' });
     fetchUsers(); // Обновляем список пользователей
   };

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { NotificationService } from '@/components/ui/notification-service';
 import { Input } from '@/components/ui/input';
 import { Table } from '@/components/ui/table';
 import { useCartStore } from '@/store/cart-store';
@@ -21,6 +22,7 @@ export function InventoryManagement() {
   };
 
   const addProduct = async () => {
+    notifySuccess('Товар успешно добавлен!');
     logChange('added', newProduct.id);
 
     const response = await fetch('/api/products', {
@@ -41,6 +43,8 @@ const [isDeleteDialogOpen, setDeleteDialogOpen] = useState(false);
 const [productToDelete, setProductToDelete] = useState<string | null>(null);
 
 const deleteProduct = async (id: string) => {
+    await logChange('deleted', id);
+    notifySuccess('Товар успешно удален!');
     await logChange('deleted', id);
 
     setProductToDelete(id);
