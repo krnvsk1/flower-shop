@@ -10,8 +10,9 @@ interface StoreHeaderProps {
 }
 
 export function StoreHeader({ onCartClick }: StoreHeaderProps) {
-  const itemCount = useCartStore((s) => s.itemCount);
-  const count = itemCount();
+  const count = useCartStore((s) =>
+    s.items.reduce((sum, item) => sum + item.quantity, 0)
+  );
 
   return (
     <header className="sticky top-0 z-40 w-full bg-white/80 backdrop-blur-md border-b border-slate-100">

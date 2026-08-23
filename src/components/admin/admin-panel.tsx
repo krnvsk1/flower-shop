@@ -3,9 +3,8 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { AdminAuth } from './admin-auth'
-import { Analytics } from './analytics';
-import { CategoryManagement } from './category-management';
-import { InventoryManagement } from './inventory-management'
+import { Dashboard } from './dashboard'
+import { FlowerManager } from './flower-manager'
 import { OrderManager } from './order-manager'
 import { WriteOffManager } from './writeoff-manager'
 import {
@@ -13,7 +12,6 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
-import { Separator } from '@/components/ui/separator'
 import { Flower2, LayoutDashboard, ShoppingCart, PackageX, PanelLeftClose, PanelLeftOpen, LogOut } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -22,16 +20,7 @@ const SESSION_KEY = 'flower_admin_auth'
 type TabKey = 'dashboard' | 'flowers' | 'orders' | 'writeoffs'
 
 const NAV_ITEMS: { key: TabKey; label: string; description: string; icon: typeof LayoutDashboard }[] = [
-  { key: 'users', label: 'Пользователи', description: 'Управление пользователями', icon: LayoutDashboard },
-  { key: 'categories', label: 'Категории', description: 'Управление категориями товаров', icon: Flower2 },
-  { key: 'flowers', label: 'Товары', description: 'Управление ассортиментом цветов', icon: Flower2 },
-  { key: 'changes', label: 'История изменений', description: 'Отслеживание изменений товаров', icon: PackageX },
-  { key: 'analytics', label: 'Аналитика', description: 'Статистика по продажам', icon: LayoutDashboard },,
   { key: 'dashboard', label: 'Панель управления', description: 'Общая статистика магазина', icon: LayoutDashboard },
-
-  { key: 'dashboard', label: 'Панель управления', description: 'Общая статистика магазина', icon: LayoutDashboard },
-  { key: 'inventory', label: 'Запасы', description: 'Управление запасами товаров', icon: PackageX },
-   { key: 'categories', label: 'Категории', description: 'Управление категориями товаров', icon: Flower2 },
   { key: 'flowers', label: 'Товары', description: 'Управление ассортиментом цветов', icon: Flower2 },
   { key: 'orders', label: 'Заказы', description: 'Обработка и отслеживание заказов', icon: ShoppingCart },
   { key: 'writeoffs', label: 'Списания', description: 'Учёт испорченных товаров', icon: PackageX },
@@ -50,14 +39,12 @@ function AdminContent() {
 
   return (
     <div className="min-h-screen flex bg-background">
-      {/* Sidebar */}
       <aside
         className={cn(
           'sticky top-0 h-screen flex flex-col border-r bg-background/95 backdrop-blur transition-all duration-300 z-50',
           collapsed ? 'w-[68px]' : 'w-[240px]'
         )}
       >
-        {/* Top: Logo+Arrow combined */}
         <div className="flex items-center px-3 h-14 border-b flex-shrink-0">
           <button
             onClick={() => setCollapsed((c) => !c)}
@@ -96,7 +83,6 @@ function AdminContent() {
           </button>
         </div>
 
-        {/* Nav items */}
         <nav className="flex-1 flex flex-col gap-1 px-3 py-4">
           {NAV_ITEMS.map((item) => {
             const Icon = item.icon
@@ -146,7 +132,6 @@ function AdminContent() {
           })}
         </nav>
 
-        {/* Bottom: Logout */}
         <div className="border-t px-3 py-3 flex-shrink-0">
           {collapsed ? (
             <Tooltip delayDuration={0}>
@@ -174,9 +159,7 @@ function AdminContent() {
         </div>
       </aside>
 
-      {/* Main Content */}
       <div className="flex-1 flex flex-col min-h-screen">
-        {/* Page header */}
         <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur">
           <div className="px-6 py-4 flex items-center gap-3">
             <div className={cn(
@@ -201,16 +184,13 @@ function AdminContent() {
           </div>
         </header>
 
-        {/* Page content */}
         <main className="flex-1 p-6">
-          {activeTab === 'changes' && <ChangesManagement />}
-          {activeTab === 'categories' && <CategoryManagement />}
-           {activeTab === 'inventory' && <InventoryManagement />}
+          {activeTab === 'dashboard' && <Dashboard />}
+          {activeTab === 'flowers' && <FlowerManager />}
           {activeTab === 'orders' && <OrderManager />}
           {activeTab === 'writeoffs' && <WriteOffManager />}
         </main>
 
-        {/* Footer */}
         <footer className="border-t py-4 mt-auto">
           <div className="px-6 text-center text-sm text-muted-foreground">
             Цветочный магазин — Панель администратора

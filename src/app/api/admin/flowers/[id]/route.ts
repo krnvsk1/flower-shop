@@ -11,7 +11,15 @@ export async function PUT(
 
     const flower = await db.flower.update({
       where: { id },
-      data: body,
+      data: {
+        ...(body.name !== undefined && { name: body.name }),
+        ...(body.description !== undefined && { description: body.description }),
+        ...(body.price !== undefined && { price: Number(body.price) }),
+        ...(body.stock !== undefined && { stock: Number(body.stock) }),
+        ...(body.imageUrl !== undefined && { imageUrl: body.imageUrl }),
+        ...(body.category !== undefined && { category: body.category }),
+        ...(body.active !== undefined && { active: Boolean(body.active) }),
+      },
     })
 
     return NextResponse.json(flower)
