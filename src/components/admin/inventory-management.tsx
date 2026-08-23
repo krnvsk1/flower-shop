@@ -130,7 +130,7 @@ setLoading(true);
             </tr>
           </thead>
 <tbody>
-            {products.map((product) => (
+{products.map((product) => (
               <tr key={product.id}>
                 <td className="font-semibold text-lg">{product.name}</td>
                 <td className="text-sm text-slate-500">{product.description}</td>
