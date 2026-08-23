@@ -129,7 +129,7 @@ setLoading(true);
               <th>Действия</th>
             </tr>
           </thead>
-        <tbody>
+<tbody>
             {products.map((product) => (
               <tr key={product.id}>
                 <td className="font-semibold text-lg">{product.name}</td>
@@ -148,6 +148,7 @@ setLoading(true);
                 </td>
               </tr>
             ))}
+          </tbody>
           </tbody>
           </tbody>
               <tr key={product.id}>
