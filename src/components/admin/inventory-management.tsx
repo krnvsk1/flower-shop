@@ -103,8 +103,10 @@ const deleteProduct = async (id: string) => {
         <tbody>
           {products.map((product) => (
                </tr>
-            <tr key={product.id}>
-              <td>{product.name}</td>
+   <tr key={product.id}>
+
+   <td>{product.name}</td>
+
               <td>{product.price} ₽</td>
               <td>{product.stock}</td>
               <td>
