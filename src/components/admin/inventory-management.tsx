@@ -126,8 +126,25 @@ const deleteProduct = async (id: string) => {
               <th>Действия</th>
             </tr>
           </thead>
-          <tbody>
+        <tbody>
             {products.map((product) => (
+              <tr key={product.id}>
+                <td className="font-semibold text-lg mb-2">{product.name}</td>
+                <td className="text-sm text-slate-500">{product.description}</td>
+                <td className="text-lg font-bold text-rose-600">{product.price} ₽</td>
+                <td className="text-sm">В наличии: {product.stock}</td>
+                <td>
+                  <Button onClick={() => {
+                    setSelectedProduct(product);
+                    setEditDialogOpen(true);
+                  }}>Редактировать</Button>
+                  <Button onClick={() => {
+                    setProductToDelete(product.id);
+                    setDeleteDialogOpen(true);
+                  }}>Удалить</Button>
+                </td>
+              </tr>
+            ))}
               <tr key={product.id}>
                 <td className="font-semibold text-lg mb-2">{product.name}</td>
                 <td className="text-sm text-slate-500">{product.description}</td>
