@@ -21,7 +21,7 @@ export function Analytics() {
 
   return (
     <div className="p-4">
-      <h2 className="text-lg font-bold mb-4">Аналитика продаж</h2>
+      <h2 className="text-xl font-bold mb-4">Аналитика продаж</h2>
       <Table>
         <thead>
           <tr>

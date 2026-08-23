@@ -40,7 +40,7 @@ export function UserManagement() {
 
   return (
     <div className="p-4">
-      <h2 className="text-lg font-bold mb-4">Управление пользователями</h2>
+      <h2 className="text-xl font-bold mb-4">Управление пользователями</h2>
       <div className="mb-4">
         <Input placeholder="Имя" value={newUser.name} onChange={(e) => setNewUser({...newUser, name: e.target.value})} />
         <Input placeholder="Email" value={newUser.email} onChange={(e) => setNewUser({...newUser, email: e.target.value})} />

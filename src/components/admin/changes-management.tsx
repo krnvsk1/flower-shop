@@ -21,7 +21,7 @@ export function ChangesManagement() {
 
   return (
     <div className="p-4">
-      <h2 className="text-lg font-bold mb-4">История изменений</h2>
+      <h2 className="text-xl font-bold mb-4">История изменений</h2>
       <Table>
         <thead>
           <tr>

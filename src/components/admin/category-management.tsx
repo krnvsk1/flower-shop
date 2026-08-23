@@ -38,7 +38,7 @@ export function CategoryManagement() {
 
   return (
     <div className="p-4">
-      <h2 className="text-lg font-bold mb-4">Управление категориями</h2>
+      <h2 className="text-xl font-bold mb-4">Управление категориями</h2>
       <div className="mb-4">
         <Input placeholder="Новая категория" value={newCategory} onChange={(e) => setNewCategory(e.target.value)} />
         <Button onClick={addCategory}>Добавить категорию</Button>

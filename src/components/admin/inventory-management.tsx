@@ -61,7 +61,7 @@ const deleteProduct = async (id: string) => {
 
   return (
     <div className="p-4">
-      <EditProductDialog open={isEditDialogOpen} onOpenChange={setEditDialogOpen} product={selectedProduct} onUpdate={fetchProducts} />      <h2 className="text-lg font-bold mb-4">Управление запасами</h2>
+      <EditProductDialog open={isEditDialogOpen} onOpenChange={setEditDialogOpen} product={selectedProduct} onUpdate={fetchProducts} />      <h2 className="text-xl font-bold mb-4">Управление запасами</h2>
       <div className="mb-4">
         <h3 className="text-md font-semibold">Добавить новый товар</h3>
         <Input placeholder="Название" value={newProduct.name} onChange={(e) => setNewProduct({...newProduct, name: e.target.value})} />
@@ -72,7 +72,7 @@ const deleteProduct = async (id: string) => {
         <Button onClick={addProduct}>Добавить товар</Button>
       </div>
       <ConfirmDeleteDialog open={isDeleteDialogOpen} onOpenChange={setDeleteDialogOpen} onConfirm={() => deleteConfirmed(productToDelete)} />
-<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+<div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 p-4">
           {products.map((product) => (
             <div key={product.id} className="border rounded-lg shadow-sm p-4">
               <h3 className="font-semibold text-lg mb-2">{product.name}</h3>
