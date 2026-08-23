@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Table } from '@/components/ui/table';
 import { useCartStore } from '@/store/cart-store';
 import { Flower } from './flower-card';
+import { notifySuccess, logChange } from '@/components/ui/notification-service';
 
 export function InventoryManagement() {
   const [products, setProducts] = useState<Flower[]>([]);
@@ -71,7 +72,7 @@ const deleteProduct = async (id: string) => {
         <Input placeholder="Категория" value={newProduct.category} onChange={(e) => setNewProduct({...newProduct, category: e.target.value})} />
         <Button onClick={addProduct}>Добавить товар</Button>
       </div>
-      <ConfirmDeleteDialog open={isDeleteDialogOpen} onOpenChange={setDeleteDialogOpen} onConfirm={() => deleteConfirmed(productToDelete)} />
+      <ConfirmDeleteDialog open={isDeleteDialogOpen} onOpenChange={setDeleteDialogOpen} onConfirm={() => deleteProduct(productToDelete)} />
 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
           {products.map((product) => (
             <tr key={product.id}>
