@@ -89,7 +89,7 @@ const deleteProduct = async (id: string) => {
                 }}>Удалить</Button>
               </td>
             </tr>
-              <h3 className="font-semibold text-lg mb-2">{product.name}</h3>
+              <div className="font-semibold text-lg mb-2">{product.name}</div>
               <p className="text-sm text-slate-500">{product.description}</p>
               <p className="text-lg font-bold text-rose-600">{product.price} ₽</p>
               <p className="text-sm">В наличии: {product.stock}</p>
