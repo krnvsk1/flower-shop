@@ -1,41 +1,58 @@
 'use client'
 
-import { useState, type ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Lock, Flower2 } from 'lucide-react'
 
-const ADMIN_PASSWORD = 'admin123'
-const SESSION_KEY = 'flower_admin_auth'
-
 export function AdminAuth({ children }: { children: ReactNode }) {
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
-    if (typeof window === 'undefined') return false
-    return sessionStorage.getItem(SESSION_KEY) === 'true'
-  })
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [checking, setChecking] = useState(true)
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
-  const handleLogin = () => {
+  useEffect(() => {
+    fetch('/api/admin/session')
+      .then((res) => res.json())
+      .then((data) => setIsAuthenticated(Boolean(data.authenticated)))
+      .catch(() => setIsAuthenticated(false))
+      .finally(() => setChecking(false))
+  }, [])
+
+  const handleLogin = async () => {
     setLoading(true)
     setError('')
-
-    // Small delay to show loading state
-    setTimeout(() => {
-      if (password === ADMIN_PASSWORD) {
-        sessionStorage.setItem(SESSION_KEY, 'true')
-        setIsAuthenticated(true)
-      } else {
+    try {
+      const res = await fetch('/api/admin/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password }),
+      })
+      if (!res.ok) {
         setError('Неверный пароль')
+        return
       }
+      setIsAuthenticated(true)
+      setPassword('')
+    } catch {
+      setError('Не удалось войти')
+    } finally {
       setLoading(false)
-    }, 300)
+    }
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') handleLogin()
+    if (e.key === 'Enter') void handleLogin()
+  }
+
+  if (checking) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-rose-50/60 text-sm text-muted-foreground">
+        Проверка сессии...
+      </div>
+    )
   }
 
   if (!isAuthenticated) {
@@ -67,7 +84,7 @@ export function AdminAuth({ children }: { children: ReactNode }) {
             )}
             <Button
               className="w-full bg-rose-600 hover:bg-rose-700 text-white cursor-pointer"
-              onClick={handleLogin}
+              onClick={() => void handleLogin()}
               disabled={loading || !password}
             >
               {loading ? 'Вход...' : 'Войти'}
@@ -79,17 +96,4 @@ export function AdminAuth({ children }: { children: ReactNode }) {
   }
 
   return <>{children}</>
-}
-
-export function AdminLogoutButton({ onLogout }: { onLogout: () => void }) {
-  return (
-    <Button
-      variant="outline"
-      size="sm"
-      onClick={onLogout}
-      className="text-rose-600 border-rose-200 hover:bg-rose-50 hover:text-rose-700 cursor-pointer"
-    >
-      Выйти
-    </Button>
-  )
 }

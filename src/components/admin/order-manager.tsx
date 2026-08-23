@@ -1,9 +1,10 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useMemo, useState, useCallback, useRef } from 'react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
   Table,
@@ -28,7 +29,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { RefreshCw, AlertTriangle, PackageCheck, PackageX } from 'lucide-react'
+import { RefreshCw, AlertTriangle, PackageCheck, PackageX, ChevronDown, Phone } from 'lucide-react'
 
 type OrderItem = {
   id: string
@@ -42,6 +43,9 @@ type Order = {
   id: string
   clientName: string
   clientPhone: string
+  address: string | null
+  deliverySlot: string | null
+  comment: string | null
   status: string
   totalAmount: number
   createdAt: string
@@ -49,20 +53,14 @@ type Order = {
   items: OrderItem[]
 }
 
-type StatusOption = {
-  value: string
-  label: string
-  color: string
-}
-
-const STATUSES: StatusOption[] = [
+const STATUSES = [
   { value: 'new', label: 'Новый', color: 'bg-sky-100 text-sky-700' },
   { value: 'processing', label: 'В обработке', color: 'bg-amber-100 text-amber-700' },
   { value: 'completed', label: 'Выполнен', color: 'bg-emerald-100 text-emerald-700' },
   { value: 'cancelled', label: 'Отменён', color: 'bg-rose-100 text-rose-700' },
-]
+] as const
 
-function getStatusBadge(status: string) {
+function statusBadge(status: string) {
   const s = STATUSES.find((st) => st.value === status)
   return (
     <Badge variant="secondary" className={`${s?.color ?? 'bg-gray-100 text-gray-700'} font-medium`}>
@@ -74,28 +72,46 @@ function getStatusBadge(status: string) {
 export function OrderManager() {
   const [orders, setOrders] = useState<Order[]>([])
   const [loading, setLoading] = useState(true)
-  const [filterStatus, setFilterStatus] = useState<string>('all')
-  const [cancelDialog, setCancelDialog] = useState<{ open: boolean; order: Order | null; previousStatus: string }>({
-    open: false,
-    order: null,
-    previousStatus: '',
-  })
+  const [filterStatus, setFilterStatus] = useState('all')
+  const [query, setQuery] = useState('')
+  const [expandedId, setExpandedId] = useState<string | null>(null)
+  const [cancelDialog, setCancelDialog] = useState<{
+    open: boolean
+    order: Order | null
+    previousStatus: string
+  }>({ open: false, order: null, previousStatus: '' })
+  const knownIds = useRef<Set<string>>(new Set())
+  const firstLoad = useRef(true)
 
-  const fetchOrders = useCallback(async () => {
+  const fetchOrders = useCallback(async (silent = false) => {
     try {
       const res = await fetch('/api/admin/orders')
-      if (res.ok) {
-        setOrders(await res.json())
+      if (!res.ok) return
+      const data: Order[] = await res.json()
+      if (!firstLoad.current) {
+        const fresh = data.filter((o) => o.status === 'new' && !knownIds.current.has(o.id))
+        if (fresh.length > 0) {
+          toast.success(
+            fresh.length === 1
+              ? `Новый заказ от ${fresh[0].clientName}`
+              : `Новых заказов: ${fresh.length}`
+          )
+        }
       }
+      knownIds.current = new Set(data.map((o) => o.id))
+      firstLoad.current = false
+      setOrders(data)
     } catch {
-      toast.error('Ошибка загрузки заказов')
+      if (!silent) toast.error('Ошибка загрузки заказов')
     } finally {
       setLoading(false)
     }
   }, [])
 
   useEffect(() => {
-    fetchOrders()
+    void fetchOrders()
+    const timer = setInterval(() => void fetchOrders(true), 20000)
+    return () => clearInterval(timer)
   }, [fetchOrders])
 
   const handleStatusChange = async (order: Order, newStatus: string) => {
@@ -111,8 +127,8 @@ export function OrderManager() {
         body: JSON.stringify({ status: newStatus, previousStatus: order.status }),
       })
       if (res.ok) {
-        toast.success(`Статус изменён на «${STATUSES.find((s) => s.value === newStatus)?.label}»`)
-        fetchOrders()
+        toast.success(`Статус: «${STATUSES.find((s) => s.value === newStatus)?.label}»`)
+        void fetchOrders(true)
       }
     } catch {
       toast.error('Ошибка изменения статуса')
@@ -122,7 +138,6 @@ export function OrderManager() {
   const confirmCancel = async (restoreStock: boolean) => {
     if (!cancelDialog.order) return
     const order = cancelDialog.order
-
     try {
       const res = await fetch(`/api/admin/orders/${order.id}`, {
         method: 'PATCH',
@@ -134,38 +149,54 @@ export function OrderManager() {
         }),
       })
       if (res.ok) {
-        if (restoreStock) {
-          toast.success('Заказ отменён. Остатки возвращены на склад.')
-        } else {
-          toast.success('Заказ отменён. Товары списаны.')
-        }
-        fetchOrders()
+        toast.success(restoreStock ? 'Заказ отменён, цветы на складе.' : 'Заказ отменён, товары списаны.')
+        void fetchOrders(true)
       }
     } catch {
       toast.error('Ошибка отмены заказа')
     } finally {
-      setCancelDialog({ open: false, order: null })
+      setCancelDialog({ open: false, order: null, previousStatus: '' })
     }
   }
 
-  const filteredOrders =
-    filterStatus === 'all' ? orders : orders.filter((o) => o.status === filterStatus)
+  const filteredOrders = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    return orders.filter((o) => {
+      const statusOk = filterStatus === 'all' || o.status === filterStatus
+      if (!statusOk) return false
+      if (!q) return true
+      return (
+        o.clientName.toLowerCase().includes(q) ||
+        o.clientPhone.toLowerCase().includes(q) ||
+        (o.address ?? '').toLowerCase().includes(q) ||
+        o.id.toLowerCase().includes(q)
+      )
+    })
+  }, [orders, filterStatus, query])
 
-  const formatDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleString('ru-RU', {
+  const newCount = orders.filter((o) => o.status === 'new').length
+
+  const formatDate = (dateStr: string) =>
+    new Date(dateStr).toLocaleString('ru-RU', {
       day: '2-digit',
       month: '2-digit',
       year: 'numeric',
       hour: '2-digit',
       minute: '2-digit',
     })
-  }
 
   return (
     <div className="space-y-4">
-      {/* Filter */}
       <div className="flex flex-wrap items-center gap-3">
-        <span className="text-sm text-muted-foreground font-medium">Фильтр:</span>
+        {newCount > 0 && (
+          <Badge className="bg-rose-600 text-white hover:bg-rose-600">Новых: {newCount}</Badge>
+        )}
+        <Input
+          placeholder="Поиск: имя, телефон, адрес"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          className="max-w-xs"
+        />
         <Select value={filterStatus} onValueChange={setFilterStatus}>
           <SelectTrigger className="w-[180px]">
             <SelectValue />
@@ -179,26 +210,22 @@ export function OrderManager() {
             ))}
           </SelectContent>
         </Select>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={fetchOrders}
-          className="ml-auto cursor-pointer"
-        >
+        <Button variant="ghost" size="sm" onClick={() => void fetchOrders()} className="ml-auto cursor-pointer">
           <RefreshCw className="w-4 h-4 mr-1" />
           Обновить
         </Button>
       </div>
+      <p className="text-xs text-muted-foreground">Список обновляется каждые 20 секунд.</p>
 
-      {/* Table */}
       <div className="rounded-lg border overflow-hidden">
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow className="bg-muted/50">
-                <TableHead className="min-w-[90px]">ID</TableHead>
-                <TableHead className="min-w-[120px]">Клиент</TableHead>
+                <TableHead className="w-8" />
+                <TableHead className="min-w-[110px]">Клиент</TableHead>
                 <TableHead className="min-w-[120px]">Телефон</TableHead>
+                <TableHead className="min-w-[160px]">Доставка</TableHead>
                 <TableHead className="min-w-[80px] text-right">Сумма</TableHead>
                 <TableHead className="min-w-[110px] text-center">Статус</TableHead>
                 <TableHead className="min-w-[140px]">Дата</TableHead>
@@ -209,69 +236,118 @@ export function OrderManager() {
               {loading ? (
                 Array.from({ length: 5 }).map((_, i) => (
                   <TableRow key={i}>
-                    <TableCell><Skeleton className="h-4 w-16" /></TableCell>
-                    <TableCell><Skeleton className="h-4 w-24" /></TableCell>
-                    <TableCell><Skeleton className="h-4 w-24" /></TableCell>
-                    <TableCell><Skeleton className="h-4 w-14 ml-auto" /></TableCell>
-                    <TableCell><Skeleton className="h-5 w-20 mx-auto" /></TableCell>
-                    <TableCell><Skeleton className="h-4 w-28" /></TableCell>
-                    <TableCell><Skeleton className="h-8 w-32 ml-auto" /></TableCell>
+                    {Array.from({ length: 8 }).map((__, j) => (
+                      <TableCell key={j}>
+                        <Skeleton className="h-4 w-16" />
+                      </TableCell>
+                    ))}
                   </TableRow>
                 ))
               ) : filteredOrders.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                    {orders.length === 0 ? 'Заказов пока нет' : 'Нет заказов с таким статусом'}
+                  <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                    {orders.length === 0 ? 'Заказов пока нет' : 'Ничего не найдено'}
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredOrders.map((order) => (
-                  <TableRow key={order.id}>
-                    <TableCell className="font-mono text-xs text-muted-foreground">
-                      {order.id.slice(0, 8)}...
-                    </TableCell>
-                    <TableCell className="font-medium">{order.clientName}</TableCell>
-                    <TableCell className="font-mono text-sm">{order.clientPhone}</TableCell>
-                    <TableCell className="text-right font-mono">
-                      {order.totalAmount.toLocaleString('ru-RU')} ₽
-                    </TableCell>
-                    <TableCell className="text-center">{getStatusBadge(order.status)}</TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {formatDate(order.createdAt)}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {order.status === 'cancelled' ? (
-                        <Badge variant="secondary" className="bg-rose-100 text-rose-700 font-medium">
-                          Отменён
-                        </Badge>
-                      ) : (
-                        <Select
-                          value={order.status}
-                          onValueChange={(v) => handleStatusChange(order, v)}
+                filteredOrders.flatMap((order) => {
+                  const open = expandedId === order.id
+                  const rows = [
+                    <TableRow
+                      key={order.id}
+                      className="cursor-pointer"
+                      onClick={() => setExpandedId(open ? null : order.id)}
+                    >
+                      <TableCell>
+                        <ChevronDown className={`w-4 h-4 transition-transform ${open ? 'rotate-180' : ''}`} />
+                      </TableCell>
+                      <TableCell className="font-medium">{order.clientName}</TableCell>
+                      <TableCell>
+                        <a
+                          href={`tel:${order.clientPhone}`}
+                          className="inline-flex items-center gap-1 text-rose-700 hover:underline"
+                          onClick={(e) => e.stopPropagation()}
                         >
-                          <SelectTrigger className="w-[140px] h-8 text-xs ml-auto">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {STATUSES.map((s) => (
-                              <SelectItem key={s.value} value={s.value}>
-                                {s.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))
+                          <Phone className="w-3 h-3" />
+                          {order.clientPhone}
+                        </a>
+                      </TableCell>
+                      <TableCell className="text-sm">
+                        <div>{order.deliverySlot || '—'}</div>
+                        <div className="text-muted-foreground truncate max-w-[180px]">
+                          {order.address || 'Адрес не указан'}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-right font-mono">
+                        {order.totalAmount.toLocaleString('ru-RU')} ₽
+                      </TableCell>
+                      <TableCell className="text-center">{statusBadge(order.status)}</TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        {formatDate(order.createdAt)}
+                      </TableCell>
+                      <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
+                        {order.status === 'cancelled' ? (
+                          <Badge variant="secondary" className="bg-rose-100 text-rose-700">
+                            Отменён
+                          </Badge>
+                        ) : (
+                          <Select
+                            value={order.status}
+                            onValueChange={(v) => handleStatusChange(order, v)}
+                          >
+                            <SelectTrigger className="w-[140px] h-8 text-xs ml-auto">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {STATUSES.map((s) => (
+                                <SelectItem key={s.value} value={s.value}>
+                                  {s.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        )}
+                      </TableCell>
+                    </TableRow>,
+                  ]
+                  if (open) {
+                    rows.push(
+                      <TableRow key={`${order.id}-details`}>
+                        <TableCell colSpan={8} className="bg-muted/30">
+                          <div className="grid gap-3 sm:grid-cols-2 text-sm py-2">
+                            <div>
+                              <p className="font-medium mb-1">Состав</p>
+                              <ul className="space-y-1">
+                                {order.items.map((item) => (
+                                  <li key={item.id}>
+                                    {item.flowerName} × {item.quantity} —{' '}
+                                    {item.subtotal.toLocaleString('ru-RU')} ₽
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                            <div className="space-y-1">
+                              <p><span className="text-muted-foreground">Адрес:</span> {order.address || '—'}</p>
+                              <p><span className="text-muted-foreground">Время:</span> {order.deliverySlot || '—'}</p>
+                              <p><span className="text-muted-foreground">Комментарий:</span> {order.comment || '—'}</p>
+                            </div>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    )
+                  }
+                  return rows
+                })
               )}
             </TableBody>
           </Table>
         </div>
       </div>
 
-      {/* Cancel Confirmation Dialog — with restore/writeoff choice */}
-      <Dialog open={cancelDialog.open} onOpenChange={(open) => setCancelDialog({ open, order: null })}>
+      <Dialog
+        open={cancelDialog.open}
+        onOpenChange={(open) => setCancelDialog({ open, order: null, previousStatus: '' })}
+      >
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -284,51 +360,40 @@ export function OrderManager() {
                   Заказ от <strong>{cancelDialog.order?.clientName}</strong> на сумму{' '}
                   <strong>{cancelDialog.order?.totalAmount.toLocaleString('ru-RU')} ₽</strong> будет отменён.
                 </p>
-                <p className="text-sm text-muted-foreground">
-                  Что сделать с товарами из этого заказа?
-                </p>
+                <p className="text-sm text-muted-foreground">Что сделать с товарами?</p>
               </div>
             </DialogDescription>
           </DialogHeader>
-
-          {/* Choice buttons */}
           <div className="flex flex-col gap-3 py-2">
             <Button
               variant="outline"
-              className="h-auto py-4 px-4 flex items-start gap-3 cursor-pointer border-emerald-200 hover:bg-emerald-50 hover:border-emerald-300 justify-start"
-              onClick={() => confirmCancel(true)}
+              className="h-auto py-4 px-4 flex items-start gap-3 cursor-pointer border-emerald-200 hover:bg-emerald-50 justify-start"
+              onClick={() => void confirmCancel(true)}
             >
               <PackageCheck className="w-5 h-5 text-emerald-600 mt-0.5 flex-shrink-0" />
               <div className="text-left">
                 <p className="font-medium text-emerald-700">Вернуть на склад</p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Остатки товаров будут восстановлены. Цветы вернутся в продажу.
-                </p>
+                <p className="text-xs text-muted-foreground mt-1">Цветы снова в продаже.</p>
               </div>
             </Button>
-
             <Button
               variant="outline"
-              className="h-auto py-4 px-4 flex items-start gap-3 cursor-pointer border-rose-200 hover:bg-rose-50 hover:border-rose-300 justify-start"
-              onClick={() => confirmCancel(false)}
+              className="h-auto py-4 px-4 flex items-start gap-3 cursor-pointer border-rose-200 hover:bg-rose-50 justify-start"
+              onClick={() => void confirmCancel(false)}
             >
               <PackageX className="w-5 h-5 text-rose-600 mt-0.5 flex-shrink-0" />
               <div className="text-left">
                 <p className="font-medium text-rose-700">Списать</p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Товары будут списаны как испорченные/непроданные. Запись появится в разделе «Списания».
-                </p>
+                <p className="text-xs text-muted-foreground mt-1">Запись появится в «Списаниях».</p>
               </div>
             </Button>
           </div>
-
           <DialogFooter>
             <Button
               variant="ghost"
-              onClick={() => setCancelDialog({ open: false, order: null })}
-              className="cursor-pointer"
+              onClick={() => setCancelDialog({ open: false, order: null, previousStatus: '' })}
             >
-              Отмена
+              Назад
             </Button>
           </DialogFooter>
         </DialogContent>

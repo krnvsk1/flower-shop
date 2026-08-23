@@ -1,7 +1,11 @@
 import { db } from '@/lib/db'
+import { requireAdmin } from '@/lib/admin-auth'
 import { NextResponse } from 'next/server'
 
 export async function GET() {
+  const unauthorized = await requireAdmin()
+  if (unauthorized) return unauthorized
+
   try {
     const orders = await db.order.findMany({
       orderBy: { createdAt: 'desc' },

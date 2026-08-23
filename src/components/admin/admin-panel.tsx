@@ -15,8 +15,6 @@ import {
 import { Flower2, LayoutDashboard, ShoppingCart, PackageX, PanelLeftClose, PanelLeftOpen, LogOut } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
-const SESSION_KEY = 'flower_admin_auth'
-
 type TabKey = 'dashboard' | 'flowers' | 'orders' | 'writeoffs'
 
 const NAV_ITEMS: { key: TabKey; label: string; description: string; icon: typeof LayoutDashboard }[] = [
@@ -30,9 +28,9 @@ function AdminContent() {
   const [activeTab, setActiveTab] = useState<TabKey>('dashboard')
   const [collapsed, setCollapsed] = useState(false)
 
-  const handleLogout = () => {
-    sessionStorage.removeItem(SESSION_KEY)
-    window.location.reload()
+  const handleLogout = async () => {
+    await fetch('/api/admin/logout', { method: 'POST' })
+    window.location.href = '/admin'
   }
 
   const currentNav = NAV_ITEMS.find((n) => n.key === activeTab)!

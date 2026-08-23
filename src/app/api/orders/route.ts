@@ -4,15 +4,19 @@ import { db } from '@/lib/db';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { clientName, clientPhone, items } = body;
+    const { clientName, clientPhone, address, deliverySlot, comment, items } = body;
 
     // Validate required fields
     if (!clientName || typeof clientName !== 'string' || clientName.trim().length === 0) {
-      return NextResponse.json({ error: 'Client name is required' }, { status: 400 });
+      return NextResponse.json({ error: 'Укажите имя' }, { status: 400 });
     }
 
     if (!clientPhone || typeof clientPhone !== 'string' || clientPhone.trim().length === 0) {
-      return NextResponse.json({ error: 'Client phone is required' }, { status: 400 });
+      return NextResponse.json({ error: 'Укажите телефон' }, { status: 400 });
+    }
+
+    if (!address || typeof address !== 'string' || address.trim().length < 5) {
+      return NextResponse.json({ error: 'Укажите адрес доставки' }, { status: 400 });
     }
 
     if (!Array.isArray(items) || items.length === 0) {
@@ -80,6 +84,13 @@ export async function POST(request: NextRequest) {
         data: {
           clientName: clientName.trim(),
           clientPhone: clientPhone.trim(),
+          address: address.trim(),
+          deliverySlot:
+            typeof deliverySlot === 'string' && deliverySlot.trim()
+              ? deliverySlot.trim()
+              : null,
+          comment:
+            typeof comment === 'string' && comment.trim() ? comment.trim() : null,
           totalAmount,
           items: {
             create: validatedItems.map((item) => ({

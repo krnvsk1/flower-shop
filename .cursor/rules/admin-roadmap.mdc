@@ -1,0 +1,28 @@
+---
+description: Roadmap for flower shop admin UX — follow remaining steps
+alwaysApply: true
+---
+
+# Admin roadmap (flower-shop)
+
+Do this in order. Do not jump to analytics, roles, or payments until the current step is done.
+
+## Done / in progress
+- Catalog, cart, checkout (name + phone)
+- Admin tabs: dashboard, flowers, orders, write-offs
+- `/admin` + cookie auth on `/api/admin/*`
+- Order fields: address, delivery slot, comment; order search + auto-refresh
+
+## Next
+1. Clickable dashboard (new orders, low stock) + last 5 orders with “in progress”
+2. Inline stock/price edit in the flowers table; bulk hide/show; category dictionary
+3. Stock inbound (приход) + low-stock purchase list
+4. Order assembly checklist + printable slip
+5. Client history by phone
+6. Real roles (seller vs owner) and change log
+7. Optional: payment mark, WhatsApp/Telegram ping, delivery slots capacity
+
+## Do not
+- Put the admin password in client code
+- Keep admin UI on the storefront `/` page
+- Ship stub tabs (analytics/categories/inventory/changes) until they have APIs

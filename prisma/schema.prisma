@@ -26,15 +26,18 @@ model Flower {
 
 // ── Заказы клиентов ──
 model Order {
-  id          String   @id @default(cuid())
-  clientName  String   // имя клиента
-  clientPhone String   // телефон клиента
-  status      String   @default("new") // new | processing | completed | cancelled
-  totalAmount Float    // сумма заказа
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id            String   @id @default(cuid())
+  clientName    String
+  clientPhone   String
+  address       String?
+  deliverySlot  String?
+  comment       String?
+  status        String   @default("new") // new | processing | completed | cancelled
+  totalAmount   Float
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
-  items       OrderItem[]
+  items         OrderItem[]
 }
 
 // ── Позиции заказа ──

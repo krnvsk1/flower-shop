@@ -1,7 +1,11 @@
 import { db } from '@/lib/db'
+import { requireAdmin } from '@/lib/admin-auth'
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function GET() {
+  const unauthorized = await requireAdmin()
+  if (unauthorized) return unauthorized
+
   try {
     const flowers = await db.flower.findMany({
       orderBy: { createdAt: 'desc' },
@@ -14,6 +18,9 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
+  const unauthorized = await requireAdmin()
+  if (unauthorized) return unauthorized
+
   try {
     const body = await req.json()
     const { name, description, price, stock, imageUrl, category } = body
