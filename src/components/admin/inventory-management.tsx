@@ -74,7 +74,21 @@ const deleteProduct = async (id: string) => {
       <ConfirmDeleteDialog open={isDeleteDialogOpen} onOpenChange={setDeleteDialogOpen} onConfirm={() => deleteConfirmed(productToDelete)} />
 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 p-4">
           {products.map((product) => (
-            <div key={product.id} className="border rounded-lg shadow-sm p-4">
+            <tr key={product.id}>
+              <td>{product.name}</td>
+              <td>{product.price} ₽</td>
+              <td>{product.stock}</td>
+              <td>
+                <Button onClick={() => {
+                  setSelectedProduct(product);
+                  setEditDialogOpen(true);
+                }}>Редактировать</Button>
+                <Button onClick={() => {
+                  setProductToDelete(product.id);
+                  setDeleteDialogOpen(true);
+                }}>Удалить</Button>
+              </td>
+            </tr>
               <h3 className="font-semibold text-lg mb-2">{product.name}</h3>
               <p className="text-sm text-slate-500">{product.description}</p>
               <p className="text-lg font-bold text-rose-600">{product.price} ₽</p>
