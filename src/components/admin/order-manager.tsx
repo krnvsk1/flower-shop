@@ -69,10 +69,10 @@ function statusBadge(status: string) {
   )
 }
 
-export function OrderManager() {
+export function OrderManager({ initialStatus = 'all' }: { initialStatus?: string }) {
   const [orders, setOrders] = useState<Order[]>([])
   const [loading, setLoading] = useState(true)
-  const [filterStatus, setFilterStatus] = useState('all')
+  const [filterStatus, setFilterStatus] = useState(initialStatus)
   const [query, setQuery] = useState('')
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [cancelDialog, setCancelDialog] = useState<{
@@ -82,6 +82,10 @@ export function OrderManager() {
   }>({ open: false, order: null, previousStatus: '' })
   const knownIds = useRef<Set<string>>(new Set())
   const firstLoad = useRef(true)
+
+  useEffect(() => {
+    setFilterStatus(initialStatus)
+  }, [initialStatus])
 
   const fetchOrders = useCallback(async (silent = false) => {
     try {

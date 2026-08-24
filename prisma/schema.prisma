@@ -65,3 +65,9 @@ model WriteOff {
 
   flower      Flower   @relation(fields: [flowerId], references: [id])
 }
+
+model Category {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  createdAt DateTime @default(now())
+}

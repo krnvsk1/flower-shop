@@ -15,7 +15,7 @@ import {
 import { Flower2, LayoutDashboard, ShoppingCart, PackageX, PanelLeftClose, PanelLeftOpen, LogOut } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
-type TabKey = 'dashboard' | 'flowers' | 'orders' | 'writeoffs'
+export type TabKey = 'dashboard' | 'flowers' | 'orders' | 'writeoffs'
 
 const NAV_ITEMS: { key: TabKey; label: string; description: string; icon: typeof LayoutDashboard }[] = [
   { key: 'dashboard', label: 'Панель управления', description: 'Общая статистика магазина', icon: LayoutDashboard },
@@ -27,6 +27,20 @@ const NAV_ITEMS: { key: TabKey; label: string; description: string; icon: typeof
 function AdminContent() {
   const [activeTab, setActiveTab] = useState<TabKey>('dashboard')
   const [collapsed, setCollapsed] = useState(false)
+  const [orderFilter, setOrderFilter] = useState('all')
+  const [lowStockOnly, setLowStockOnly] = useState(false)
+
+  const openTab = (tab: TabKey) => {
+    setActiveTab(tab)
+    setOrderFilter('all')
+    setLowStockOnly(false)
+  }
+
+  const onDashboardNavigate = (nav: { tab: TabKey; orderStatus?: string; lowStock?: boolean }) => {
+    setActiveTab(nav.tab)
+    setOrderFilter(nav.orderStatus ?? 'all')
+    setLowStockOnly(Boolean(nav.lowStock))
+  }
 
   const handleLogout = async () => {
     await fetch('/api/admin/logout', { method: 'POST' })
@@ -89,7 +103,7 @@ function AdminContent() {
             const button = (
               <button
                 key={item.key}
-                onClick={() => setActiveTab(item.key)}
+                onClick={() => openTab(item.key)}
                 className={cn(
                   'w-full flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200 cursor-pointer',
                   isActive
@@ -183,9 +197,9 @@ function AdminContent() {
         </header>
 
         <main className="flex-1 p-6">
-          {activeTab === 'dashboard' && <Dashboard />}
-          {activeTab === 'flowers' && <FlowerManager />}
-          {activeTab === 'orders' && <OrderManager />}
+          {activeTab === 'dashboard' && <Dashboard onNavigate={onDashboardNavigate} />}
+          {activeTab === 'flowers' && <FlowerManager lowStockOnly={lowStockOnly} />}
+          {activeTab === 'orders' && <OrderManager initialStatus={orderFilter} />}
           {activeTab === 'writeoffs' && <WriteOffManager />}
         </main>
 

@@ -12,15 +12,15 @@ Do this in order. Do not jump to analytics, roles, or payments until the current
 - Admin tabs: dashboard, flowers, orders, write-offs
 - `/admin` + cookie auth on `/api/admin/*`
 - Order fields: address, delivery slot, comment; order search + auto-refresh
+- Clickable dashboard (new/in-progress/low stock) + last 5 orders with “take in progress”
+- Inline stock/price in flowers table; bulk hide/show; category dictionary
 
 ## Next
-1. Clickable dashboard (new orders, low stock) + last 5 orders with “in progress”
-2. Inline stock/price edit in the flowers table; bulk hide/show; category dictionary
-3. Stock inbound (приход) + low-stock purchase list
-4. Order assembly checklist + printable slip
-5. Client history by phone
-6. Real roles (seller vs owner) and change log
-7. Optional: payment mark, WhatsApp/Telegram ping, delivery slots capacity
+1. Stock inbound (приход) + low-stock purchase list
+3. Order assembly checklist + printable slip
+4. Client history by phone
+5. Real roles (seller vs owner) and change log
+6. Optional: payment mark, WhatsApp/Telegram ping, delivery slots capacity
 
 ## Do not
 - Put the admin password in client code

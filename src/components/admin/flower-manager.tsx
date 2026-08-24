@@ -1,12 +1,13 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useMemo } from 'react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Checkbox } from '@/components/ui/checkbox'
 import {
   Table,
   TableBody,
@@ -46,17 +47,7 @@ type Flower = {
   updatedAt: string
 }
 
-const CATEGORIES = [
-  'Розы',
-  'Тюльпаны',
-  'Гвоздики',
-  'Лилии',
-  'Хризантемы',
-  'Орхидеи',
-  'Сезонные',
-  'Композиции',
-  'Другое',
-]
+type Category = { id: string; name: string }
 
 const emptyForm = {
   name: '',
@@ -67,8 +58,9 @@ const emptyForm = {
   category: '',
 }
 
-export function FlowerManager() {
+export function FlowerManager({ lowStockOnly = false }: { lowStockOnly?: boolean }) {
   const [flowers, setFlowers] = useState<Flower[]>([])
+  const [categories, setCategories] = useState<Category[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [form, setForm] = useState(emptyForm)
@@ -78,13 +70,15 @@ export function FlowerManager() {
     open: false,
     flower: null,
   })
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [priceDrafts, setPriceDrafts] = useState<Record<string, string>>({})
+  const [stockDrafts, setStockDrafts] = useState<Record<string, string>>({})
+  const [newCategory, setNewCategory] = useState('')
 
   const fetchFlowers = useCallback(async () => {
     try {
       const res = await fetch('/api/admin/flowers')
-      if (res.ok) {
-        setFlowers(await res.json())
-      }
+      if (res.ok) setFlowers(await res.json())
     } catch {
       toast.error('Ошибка загрузки товаров')
     } finally {
@@ -92,9 +86,19 @@ export function FlowerManager() {
     }
   }, [])
 
+  const fetchCategories = useCallback(async () => {
+    try {
+      const res = await fetch('/api/admin/categories')
+      if (res.ok) setCategories(await res.json())
+    } catch {
+      toast.error('Ошибка загрузки категорий')
+    }
+  }, [])
+
   useEffect(() => {
-    fetchFlowers()
-  }, [fetchFlowers])
+    void fetchFlowers()
+    void fetchCategories()
+  }, [fetchFlowers, fetchCategories])
 
   const handleSubmit = async () => {
     if (!form.name.trim() || form.price === '' || form.stock === '') {
@@ -141,7 +145,7 @@ export function FlowerManager() {
           toast.error('Ошибка добавления')
         }
       }
-      fetchFlowers()
+      void fetchFlowers()
     } catch {
       toast.error('Сетевая ошибка')
     } finally {
@@ -149,19 +153,111 @@ export function FlowerManager() {
     }
   }
 
+  const patchFlower = async (id: string, data: Partial<Flower>) => {
+    const res = await fetch(`/api/admin/flowers/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    })
+    if (!res.ok) throw new Error('update failed')
+    const updated = (await res.json()) as Flower
+    setFlowers((prev) => prev.map((f) => (f.id === id ? { ...f, ...updated } : f)))
+  }
+
+  const savePrice = async (flower: Flower) => {
+    const raw = priceDrafts[flower.id]
+    if (raw === undefined) return
+    const next = Number(raw.replace(',', '.'))
+    if (!Number.isFinite(next) || next < 0) {
+      toast.error('Некорректная цена')
+      setPriceDrafts((p) => {
+        const copy = { ...p }
+        delete copy[flower.id]
+        return copy
+      })
+      return
+    }
+    if (next === flower.price) {
+      setPriceDrafts((p) => {
+        const copy = { ...p }
+        delete copy[flower.id]
+        return copy
+      })
+      return
+    }
+    try {
+      await patchFlower(flower.id, { price: next })
+      toast.success(`Цена «${flower.name}»: ${next.toLocaleString('ru-RU')} ₽`)
+    } catch {
+      toast.error('Не удалось сохранить цену')
+    } finally {
+      setPriceDrafts((p) => {
+        const copy = { ...p }
+        delete copy[flower.id]
+        return copy
+      })
+    }
+  }
+
+  const saveStock = async (flower: Flower) => {
+    const raw = stockDrafts[flower.id]
+    if (raw === undefined) return
+    const next = parseInt(raw, 10)
+    if (!Number.isInteger(next) || next < 0) {
+      toast.error('Некорректный остаток')
+      setStockDrafts((p) => {
+        const copy = { ...p }
+        delete copy[flower.id]
+        return copy
+      })
+      return
+    }
+    if (next === flower.stock) {
+      setStockDrafts((p) => {
+        const copy = { ...p }
+        delete copy[flower.id]
+        return copy
+      })
+      return
+    }
+    try {
+      await patchFlower(flower.id, { stock: next })
+      toast.success(`Остаток «${flower.name}»: ${next}`)
+    } catch {
+      toast.error('Не удалось сохранить остаток')
+    } finally {
+      setStockDrafts((p) => {
+        const copy = { ...p }
+        delete copy[flower.id]
+        return copy
+      })
+    }
+  }
+
   const handleToggleActive = async (flower: Flower) => {
     try {
-      const res = await fetch(`/api/admin/flowers/${flower.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ active: !flower.active }),
-      })
-      if (res.ok) {
-        toast.success(flower.active ? 'Товар скрыт' : 'Товар активирован')
-        fetchFlowers()
-      }
+      await patchFlower(flower.id, { active: !flower.active })
+      toast.success(flower.active ? 'Товар скрыт' : 'Товар активирован')
     } catch {
       toast.error('Ошибка изменения статуса')
+    }
+  }
+
+  const bulkSetActive = async (active: boolean) => {
+    const ids = Array.from(selectedIds)
+    if (ids.length === 0) return
+    try {
+      const res = await fetch('/api/admin/flowers/bulk', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids, active }),
+      })
+      if (!res.ok) throw new Error()
+      toast.success(active ? `Показано: ${ids.length}` : `Скрыто: ${ids.length}`)
+      setSelectedIds(new Set())
+      void fetchFlowers()
+    } catch {
+      toast.error('Не удалось обновить товары')
     }
   }
 
@@ -173,7 +269,7 @@ export function FlowerManager() {
       })
       if (res.ok) {
         toast.success('Товар удалён (деактивирован)')
-        fetchFlowers()
+        void fetchFlowers()
       }
     } catch {
       toast.error('Ошибка удаления')
@@ -201,6 +297,51 @@ export function FlowerManager() {
     setTab('list')
   }
 
+  const addCategory = async () => {
+    const name = newCategory.trim()
+    if (!name) return
+    try {
+      const res = await fetch('/api/admin/categories', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name }),
+      })
+      if (!res.ok) throw new Error()
+      setNewCategory('')
+      toast.success('Категория добавлена')
+      void fetchCategories()
+    } catch {
+      toast.error('Не удалось добавить категорию')
+    }
+  }
+
+  const removeCategory = async (id: string) => {
+    try {
+      const res = await fetch(`/api/admin/categories/${id}`, { method: 'DELETE' })
+      if (!res.ok) throw new Error()
+      toast.success('Категория удалена')
+      void fetchCategories()
+    } catch {
+      toast.error('Не удалось удалить категорию')
+    }
+  }
+
+  const visibleFlowers = useMemo(
+    () => (lowStockOnly ? flowers.filter((f) => f.stock <= 5) : flowers),
+    [flowers, lowStockOnly]
+  )
+
+  const allVisibleSelected =
+    visibleFlowers.length > 0 && visibleFlowers.every((f) => selectedIds.has(f.id))
+
+  const toggleSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedIds(new Set(visibleFlowers.map((f) => f.id)))
+    } else {
+      setSelectedIds(new Set())
+    }
+  }
+
   const isEditing = editingId !== null
 
   return (
@@ -213,19 +354,46 @@ export function FlowerManager() {
           <Plus className="w-4 h-4 mr-1" />
           {isEditing ? 'Редактирование' : 'Добавить цветок'}
         </TabsTrigger>
+        <TabsTrigger value="categories" className="cursor-pointer">
+          Категории
+        </TabsTrigger>
       </TabsList>
 
-      {/* List Tab */}
       <TabsContent value="list">
+        {lowStockOnly && (
+          <p className="text-sm text-rose-700 mb-3">
+            Показаны только товары с остатком 5 шт. и меньше.
+          </p>
+        )}
+        {selectedIds.size > 0 && (
+          <div className="flex flex-wrap items-center gap-2 mb-3">
+            <span className="text-sm text-muted-foreground">Выбрано: {selectedIds.size}</span>
+            <Button size="sm" variant="outline" className="cursor-pointer" onClick={() => void bulkSetActive(true)}>
+              <Eye className="w-4 h-4 mr-1" />
+              Показать на витрине
+            </Button>
+            <Button size="sm" variant="outline" className="cursor-pointer" onClick={() => void bulkSetActive(false)}>
+              <EyeOff className="w-4 h-4 mr-1" />
+              Скрыть с витрины
+            </Button>
+          </div>
+        )}
         <div className="rounded-lg border overflow-hidden">
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow className="bg-muted/50">
+                  <TableHead className="w-10">
+                    <Checkbox
+                      checked={allVisibleSelected}
+                      onCheckedChange={(v) => toggleSelectAll(v === true)}
+                      aria-label="Выбрать все"
+                    />
+                  </TableHead>
                   <TableHead className="min-w-[160px]">Название</TableHead>
                   <TableHead className="min-w-[100px]">Категория</TableHead>
-                  <TableHead className="min-w-[80px] text-right">Цена</TableHead>
-                  <TableHead className="min-w-[70px] text-right">Остаток</TableHead>
+                  <TableHead className="min-w-[110px] text-right">Цена</TableHead>
+                  <TableHead className="min-w-[90px] text-right">Остаток</TableHead>
                   <TableHead className="min-w-[90px] text-center">Статус</TableHead>
                   <TableHead className="min-w-[120px] text-right">Действия</TableHead>
                 </TableRow>
@@ -234,23 +402,34 @@ export function FlowerManager() {
                 {loading ? (
                   Array.from({ length: 5 }).map((_, i) => (
                     <TableRow key={i}>
-                      <TableCell><Skeleton className="h-4 w-28" /></TableCell>
-                      <TableCell><Skeleton className="h-4 w-16" /></TableCell>
-                      <TableCell><Skeleton className="h-4 w-14 ml-auto" /></TableCell>
-                      <TableCell><Skeleton className="h-4 w-10 ml-auto" /></TableCell>
-                      <TableCell><Skeleton className="h-5 w-16 mx-auto" /></TableCell>
-                      <TableCell><Skeleton className="h-4 w-20 ml-auto" /></TableCell>
+                      <TableCell colSpan={7}><Skeleton className="h-4 w-full" /></TableCell>
                     </TableRow>
                   ))
-                ) : flowers.length === 0 ? (
+                ) : visibleFlowers.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                      Нет товаров. Добавьте первый!
+                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                      {flowers.length === 0
+                        ? 'Нет товаров. Добавьте первый!'
+                        : 'Нет товаров с низким остатком'}
                     </TableCell>
                   </TableRow>
                 ) : (
-                  flowers.map((f) => (
-                    <TableRow key={f.id} className={!f.active ? 'opacity-50' : ''}>
+                  visibleFlowers.map((f) => (
+                    <TableRow key={f.id} className={!f.active ? 'opacity-60' : ''}>
+                      <TableCell>
+                        <Checkbox
+                          checked={selectedIds.has(f.id)}
+                          onCheckedChange={(v) => {
+                            setSelectedIds((prev) => {
+                              const next = new Set(prev)
+                              if (v === true) next.add(f.id)
+                              else next.delete(f.id)
+                              return next
+                            })
+                          }}
+                          aria-label={`Выбрать ${f.name}`}
+                        />
+                      </TableCell>
                       <TableCell className="font-medium">{f.name}</TableCell>
                       <TableCell>
                         {f.category ? (
@@ -261,11 +440,31 @@ export function FlowerManager() {
                           <span className="text-muted-foreground">—</span>
                         )}
                       </TableCell>
-                      <TableCell className="text-right font-mono">
-                        {f.price.toLocaleString('ru-RU')} ₽
+                      <TableCell className="text-right">
+                        <Input
+                          className="h-8 w-[100px] ml-auto text-right font-mono"
+                          value={priceDrafts[f.id] ?? String(f.price)}
+                          onChange={(e) =>
+                            setPriceDrafts((p) => ({ ...p, [f.id]: e.target.value }))
+                          }
+                          onBlur={() => void savePrice(f)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
+                          }}
+                        />
                       </TableCell>
-                      <TableCell className={`text-right font-mono ${f.stock <= 5 ? 'text-rose-600 font-semibold' : ''}`}>
-                        {f.stock}
+                      <TableCell className="text-right">
+                        <Input
+                          className={`h-8 w-[80px] ml-auto text-right font-mono ${f.stock <= 5 ? 'text-rose-600 font-semibold' : ''}`}
+                          value={stockDrafts[f.id] ?? String(f.stock)}
+                          onChange={(e) =>
+                            setStockDrafts((p) => ({ ...p, [f.id]: e.target.value }))
+                          }
+                          onBlur={() => void saveStock(f)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
+                          }}
+                        />
                       </TableCell>
                       <TableCell className="text-center">
                         <Badge
@@ -290,14 +489,10 @@ export function FlowerManager() {
                             variant="ghost"
                             size="icon"
                             className="h-8 w-8 cursor-pointer"
-                            onClick={() => handleToggleActive(f)}
+                            onClick={() => void handleToggleActive(f)}
                             title={f.active ? 'Скрыть' : 'Активировать'}
                           >
-                            {f.active ? (
-                              <EyeOff className="w-4 h-4" />
-                            ) : (
-                              <Eye className="w-4 h-4" />
-                            )}
+                            {f.active ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                           </Button>
                           <Button
                             variant="ghost"
@@ -317,9 +512,11 @@ export function FlowerManager() {
             </Table>
           </div>
         </div>
+        <p className="text-xs text-muted-foreground mt-2">
+          Цену и остаток можно менять прямо в таблице — сохраняется при уходе с поля.
+        </p>
       </TabsContent>
 
-      {/* Add/Edit Tab */}
       <TabsContent value="add">
         <div className="max-w-lg">
           <div className="space-y-4">
@@ -380,9 +577,9 @@ export function FlowerManager() {
                   <SelectValue placeholder="Выберите категорию" />
                 </SelectTrigger>
                 <SelectContent>
-                  {CATEGORIES.map((cat) => (
-                    <SelectItem key={cat} value={cat}>
-                      {cat}
+                  {categories.map((cat) => (
+                    <SelectItem key={cat.id} value={cat.name}>
+                      {cat.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -401,18 +598,14 @@ export function FlowerManager() {
 
             <div className="flex gap-2 pt-2">
               <Button
-                onClick={handleSubmit}
+                onClick={() => void handleSubmit()}
                 disabled={saving}
                 className="bg-rose-600 hover:bg-rose-700 text-white cursor-pointer"
               >
                 {saving ? 'Сохранение...' : isEditing ? 'Сохранить изменения' : 'Добавить товар'}
               </Button>
               {isEditing && (
-                <Button
-                  variant="outline"
-                  onClick={handleCancelEdit}
-                  className="cursor-pointer"
-                >
+                <Button variant="outline" onClick={handleCancelEdit} className="cursor-pointer">
                   Отмена
                 </Button>
               )}
@@ -421,7 +614,45 @@ export function FlowerManager() {
         </div>
       </TabsContent>
 
-      {/* Delete Confirmation Dialog */}
+      <TabsContent value="categories">
+        <div className="max-w-lg space-y-4">
+          <div className="flex gap-2">
+            <Input
+              placeholder="Новая категория"
+              value={newCategory}
+              onChange={(e) => setNewCategory(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') void addCategory()
+              }}
+            />
+            <Button className="cursor-pointer bg-rose-600 hover:bg-rose-700 text-white" onClick={() => void addCategory()}>
+              <Plus className="w-4 h-4 mr-1" />
+              Добавить
+            </Button>
+          </div>
+          <div className="rounded-lg border divide-y">
+            {categories.length === 0 ? (
+              <p className="p-4 text-sm text-muted-foreground">Категорий пока нет</p>
+            ) : (
+              categories.map((cat) => (
+                <div key={cat.id} className="flex items-center justify-between px-3 py-2">
+                  <span>{cat.name}</span>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-rose-600 cursor-pointer"
+                    onClick={() => void removeCategory(cat.id)}
+                    title="Удалить"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      </TabsContent>
+
       <Dialog open={deleteDialog.open} onOpenChange={(open) => setDeleteDialog({ open, flower: null })}>
         <DialogContent>
           <DialogHeader>
@@ -438,11 +669,7 @@ export function FlowerManager() {
             >
               Отмена
             </Button>
-            <Button
-              variant="destructive"
-              onClick={handleDelete}
-              className="cursor-pointer"
-            >
+            <Button variant="destructive" onClick={() => void handleDelete()} className="cursor-pointer">
               <Trash2 className="w-4 h-4 mr-1" />
               Удалить
             </Button>
