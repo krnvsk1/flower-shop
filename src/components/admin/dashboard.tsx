@@ -204,7 +204,7 @@ export function Dashboard({ onNavigate }: { onNavigate: (nav: DashboardNav) => v
                     <div className="space-y-1">
                       <p className="text-sm text-muted-foreground font-medium">{card.label}</p>
                       <p className="text-2xl font-bold text-foreground">{displayValue}</p>
-                      <p className="text-xs text-rose-600 flex items-center gap-1">
+                      <p className="text-xs text-primary flex items-center gap-1">
                         Открыть
                         <ArrowRight className="w-3 h-3" />
                       </p>
@@ -265,7 +265,7 @@ export function Dashboard({ onNavigate }: { onNavigate: (nav: DashboardNav) => v
                       {order.status === 'new' && (
                         <Button
                           size="sm"
-                          className="bg-rose-600 hover:bg-rose-700 text-white cursor-pointer"
+                          className="bg-primary hover:bg-primary/90 text-primary-foreground cursor-pointer rounded-none"
                           disabled={takingId === order.id}
                           onClick={() => void takeInProgress(order)}
                         >
@@ -307,7 +307,7 @@ export function Dashboard({ onNavigate }: { onNavigate: (nav: DashboardNav) => v
                         <span className="text-muted-foreground"> · {item.category}</span>
                       ) : null}
                     </span>
-                    <span className="font-mono text-rose-600 font-medium">{item.stock} шт.</span>
+                    <span className="font-mono text-primary font-medium">{item.stock} шт.</span>
                   </li>
                 ))}
               </ul>

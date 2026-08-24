@@ -55,7 +55,7 @@ function AdminContent() {
     <div className="min-h-screen flex bg-background">
       <aside
         className={cn(
-          'sticky top-0 h-screen flex flex-col border-r bg-background/95 backdrop-blur transition-all duration-300 z-50',
+          'sticky top-0 h-screen flex flex-col border-r border-sidebar-border bg-sidebar/90 backdrop-blur transition-all duration-300 z-50',
           collapsed ? 'w-[68px]' : 'w-[240px]'
         )}
       >
@@ -67,8 +67,8 @@ function AdminContent() {
               collapsed ? 'p-2 mx-auto hover:bg-muted' : 'px-2 py-1.5 hover:bg-muted'
             )}
           >
-            <div className="w-8 h-8 rounded-lg bg-rose-100 flex items-center justify-center flex-shrink-0">
-              <Flower2 className="w-4 h-4 text-rose-600" />
+            <div className="w-8 h-8 rounded-sm bg-primary/10 flex items-center justify-center flex-shrink-0">
+              <Flower2 className="w-4 h-4 text-primary" />
             </div>
             {collapsed ? (
               <Tooltip delayDuration={0}>
@@ -86,7 +86,7 @@ function AdminContent() {
                     initial={{ opacity: 0, width: 0 }}
                     animate={{ opacity: 1, width: 'auto' }}
                     exit={{ opacity: 0, width: 0 }}
-                    className="text-sm font-bold text-foreground whitespace-nowrap overflow-hidden"
+                    className="text-sm font-display font-semibold text-foreground whitespace-nowrap overflow-hidden"
                   >
                     Админ
                   </motion.span>
@@ -109,11 +109,11 @@ function AdminContent() {
                 className={cn(
                   'w-full flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200 cursor-pointer',
                   isActive
-                    ? 'bg-rose-100 text-rose-700 shadow-sm'
+                    ? 'bg-sidebar-accent text-sidebar-accent-foreground shadow-none'
                     : 'text-muted-foreground hover:bg-muted hover:text-foreground'
                 )}
               >
-                <Icon className={cn('w-5 h-5 flex-shrink-0', isActive && 'text-rose-600')} />
+                <Icon className={cn('w-5 h-5 flex-shrink-0', isActive && 'text-primary')} />
                 <AnimatePresence mode="wait">
                   {!collapsed && (
                     <motion.span
@@ -152,7 +152,7 @@ function AdminContent() {
               <TooltipTrigger asChild>
                 <button
                   onClick={handleLogout}
-                  className="w-full flex items-center justify-center rounded-lg px-3 py-2 text-sm text-muted-foreground hover:bg-rose-50 hover:text-rose-600 transition-colors cursor-pointer"
+                  className="w-full flex items-center justify-center rounded-lg px-3 py-2 text-sm text-muted-foreground hover:bg-sidebar-accent hover:text-primary transition-colors cursor-pointer"
                 >
                   <LogOut className="w-5 h-5 flex-shrink-0" />
                 </button>
@@ -164,7 +164,7 @@ function AdminContent() {
           ) : (
             <button
               onClick={handleLogout}
-              className="w-full flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-muted-foreground hover:bg-rose-50 hover:text-rose-600 transition-colors cursor-pointer"
+              className="w-full flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-muted-foreground hover:bg-sidebar-accent hover:text-primary transition-colors cursor-pointer"
             >
               <LogOut className="w-5 h-5 flex-shrink-0" />
               <span className="whitespace-nowrap">Выйти</span>
@@ -176,25 +176,11 @@ function AdminContent() {
       <div className="flex-1 flex flex-col min-h-screen">
         <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur">
           <div className="px-6 py-4 flex items-center gap-3">
-            <div className={cn(
-              'w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0',
-              activeTab === 'dashboard' && 'bg-rose-100',
-              activeTab === 'flowers' && 'bg-emerald-100',
-              activeTab === 'orders' && 'bg-amber-100',
-              activeTab === 'inbound' && 'bg-emerald-100',
-              activeTab === 'writeoffs' && 'bg-rose-100',
-            )}>
-              <currentNav.icon className={cn(
-                'w-5 h-5',
-                activeTab === 'dashboard' && 'text-rose-600',
-                activeTab === 'flowers' && 'text-emerald-600',
-                activeTab === 'orders' && 'text-amber-600',
-                activeTab === 'inbound' && 'text-emerald-600',
-                activeTab === 'writeoffs' && 'text-rose-600',
-              )} />
+            <div className="w-9 h-9 rounded-sm bg-secondary flex items-center justify-center flex-shrink-0">
+              <currentNav.icon className="w-5 h-5 text-primary" />
             </div>
             <div>
-              <h1 className="text-lg font-bold text-foreground">{currentNav.label}</h1>
+              <h1 className="text-lg font-display font-semibold text-foreground">{currentNav.label}</h1>
               <p className="text-sm text-muted-foreground">{currentNav.description}</p>
             </div>
           </div>

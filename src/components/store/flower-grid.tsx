@@ -62,21 +62,24 @@ export function FlowerGrid() {
   }
 
   return (
-    <section className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      {/* Search & Filters */}
-      <div className="flex flex-col gap-4 mb-8">
-        {/* Search */}
+    <section className="w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="flex flex-col gap-6 mb-10">
+        <div className="flex items-end justify-between gap-4">
+          <div>
+            <p className="text-[11px] tracking-[0.28em] uppercase text-brass mb-1">Каталог</p>
+            <h3 className="font-display text-3xl font-semibold">Коллекция</h3>
+          </div>
+        </div>
         <div className="relative max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
-            placeholder="Поиск цветов..."
+            placeholder="Найти букет или цветок"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10 border-slate-200 focus-visible:ring-rose-500"
+            className="pl-10 bg-card border-border focus-visible:ring-primary rounded-none h-11"
           />
         </div>
 
-        {/* Category Filters */}
         <div className="flex flex-wrap gap-2">
           {categories.map((cat) => (
             <Button
@@ -86,8 +89,8 @@ export function FlowerGrid() {
               onClick={() => setActiveCategory(cat)}
               className={
                 activeCategory === cat
-                  ? 'bg-rose-500 hover:bg-rose-600 text-white border-rose-500'
-                  : 'border-slate-200 text-slate-600 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200'
+                  ? 'bg-primary hover:bg-primary/90 text-primary-foreground border-primary rounded-none'
+                  : 'border-border text-muted-foreground hover:bg-secondary hover:text-foreground rounded-none'
               }
             >
               {cat}
@@ -101,11 +104,11 @@ export function FlowerGrid() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {Array.from({ length: 6 }).map((_, i) => (
             <div key={i} className="flex flex-col gap-3">
-              <Skeleton className="w-full aspect-square rounded-lg bg-slate-100" />
-              <Skeleton className="h-5 w-3/4 bg-slate-100" />
-              <Skeleton className="h-4 w-full bg-slate-100" />
-              <Skeleton className="h-4 w-1/2 bg-slate-100" />
-              <Skeleton className="h-10 w-full bg-slate-100" />
+              <Skeleton className="w-full aspect-[4/5] rounded-none bg-muted" />
+              <Skeleton className="h-5 w-3/4 bg-muted" />
+              <Skeleton className="h-4 w-full bg-muted" />
+              <Skeleton className="h-4 w-1/2 bg-muted" />
+              <Skeleton className="h-10 w-full bg-muted" />
             </div>
           ))}
         </div>

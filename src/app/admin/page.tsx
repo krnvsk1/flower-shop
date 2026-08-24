@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { AdminPanel } from '@/components/admin/admin-panel'
 
 export const metadata: Metadata = {
-  title: 'Админ — Цветочный магазин',
+  title: 'Кабинет — Atelier',
 }
 
 export default function AdminPage() {
@@ -11,9 +11,9 @@ export default function AdminPage() {
     <div className="relative">
       <Link
         href="/"
-        className="fixed bottom-4 left-4 z-[60] bg-white border border-slate-200 text-slate-600 hover:text-rose-600 hover:border-rose-300 rounded-full px-3 py-1.5 text-xs font-medium shadow-sm"
+        className="fixed bottom-4 left-4 z-[60] bg-card border border-border text-muted-foreground hover:text-primary rounded-none px-3 py-1.5 text-[10px] tracking-widest uppercase"
       >
-        🌸 Магазин
+        На витрину
       </Link>
       <AdminPanel />
     </div>

@@ -32,10 +32,10 @@ export function CartDrawer({ open, onOpenChange, onCheckout }: CartDrawerProps) 
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="flex flex-col bg-white w-full sm:max-w-md">
+      <SheetContent side="right" className="flex flex-col bg-card w-full sm:max-w-md">
         <SheetHeader className="px-4 pt-4">
-          <SheetTitle className="flex items-center gap-2 text-slate-800">
-            <ShoppingBag className="w-5 h-5 text-rose-500" />
+          <SheetTitle className="flex items-center gap-2 font-display text-2xl">
+            <ShoppingBag className="w-5 h-5 text-primary" />
             Корзина
             {currentCount > 0 && (
               <span className="text-sm font-normal text-slate-500">
@@ -72,10 +72,10 @@ export function CartDrawer({ open, onOpenChange, onCheckout }: CartDrawerProps) 
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: -40, height: 0, marginBottom: 0 }}
                     transition={{ type: 'spring', stiffness: 350, damping: 30 }}
-                    className="flex gap-3 p-3 rounded-lg bg-slate-50 border border-slate-100"
+                    className="flex gap-3 p-3 bg-secondary/70 border border-border"
                   >
                     {/* Image or emoji placeholder */}
-                    <div className="w-16 h-16 rounded-md bg-gradient-to-br from-rose-50 to-emerald-50 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                    <div className="w-16 h-16 bg-secondary flex items-center justify-center flex-shrink-0 overflow-hidden">
                       {item.imageUrl ? (
                         <img
                           src={item.imageUrl}
@@ -94,14 +94,14 @@ export function CartDrawer({ open, onOpenChange, onCheckout }: CartDrawerProps) 
                       <p className="font-medium text-slate-800 text-sm truncate">
                         {item.name}
                       </p>
-                      <p className="text-sm text-rose-600 font-semibold mt-0.5">
+                      <p className="text-sm text-primary font-medium mt-0.5">
                         {(item.price * item.quantity).toLocaleString('ru-RU')} ₽
                       </p>
                       <div className="flex items-center gap-2 mt-2">
                         <Button
                           variant="outline"
                           size="icon"
-                          className="h-7 w-7 border-slate-200 hover:bg-rose-50 hover:border-rose-200"
+                          className="h-7 w-7 border-border hover:bg-secondary"
                           onClick={() =>
                             updateQuantity(item.flowerId, item.quantity - 1)
                           }
@@ -114,7 +114,7 @@ export function CartDrawer({ open, onOpenChange, onCheckout }: CartDrawerProps) 
                         <Button
                           variant="outline"
                           size="icon"
-                          className="h-7 w-7 border-slate-200 hover:bg-rose-50 hover:border-rose-200"
+                          className="h-7 w-7 border-border hover:bg-secondary"
                           onClick={() =>
                             updateQuantity(item.flowerId, item.quantity + 1)
                           }
@@ -145,13 +145,13 @@ export function CartDrawer({ open, onOpenChange, onCheckout }: CartDrawerProps) 
             <SheetFooter className="flex flex-col gap-3 px-4 pb-4">
               <div className="flex items-center justify-between w-full">
                 <span className="text-slate-600 font-medium">Итого:</span>
-                <span className="text-xl font-bold text-rose-600">
+                <span className="text-xl font-display text-primary">
                   {currentTotal.toLocaleString('ru-RU')} ₽
                 </span>
               </div>
               <Button
                 onClick={onCheckout}
-                className="w-full bg-rose-500 hover:bg-rose-600 text-white cursor-pointer"
+                className="w-full bg-primary hover:bg-primary/90 text-primary-foreground cursor-pointer rounded-none"
                 size="lg"
               >
                 Оформить заказ

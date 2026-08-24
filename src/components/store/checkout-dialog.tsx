@@ -146,7 +146,7 @@ export function CheckoutDialog({ open, onOpenChange }: CheckoutDialogProps) {
       <DialogContent className="sm:max-w-lg bg-white max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-slate-800">
-            <CreditCard className="w-5 h-5 text-rose-500" />
+            <CreditCard className="w-5 h-5 text-primary" />
             Оформление заказа
           </DialogTitle>
           <DialogDescription className="text-slate-400">
@@ -157,7 +157,7 @@ export function CheckoutDialog({ open, onOpenChange }: CheckoutDialogProps) {
         <div className="flex flex-col gap-4 py-2">
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="checkout-name">
-              Имя <span className="text-rose-500">*</span>
+              Имя <span className="text-primary">*</span>
             </Label>
             <Input
               id="checkout-name"
@@ -174,7 +174,7 @@ export function CheckoutDialog({ open, onOpenChange }: CheckoutDialogProps) {
 
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="checkout-phone">
-              Телефон <span className="text-rose-500">*</span>
+              Телефон <span className="text-primary">*</span>
             </Label>
             <Input
               id="checkout-phone"
@@ -191,7 +191,7 @@ export function CheckoutDialog({ open, onOpenChange }: CheckoutDialogProps) {
 
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="checkout-address">
-              Адрес доставки <span className="text-rose-500">*</span>
+              Адрес доставки <span className="text-primary">*</span>
             </Label>
             <Input
               id="checkout-address"
@@ -208,7 +208,7 @@ export function CheckoutDialog({ open, onOpenChange }: CheckoutDialogProps) {
 
           <div className="flex flex-col gap-1.5">
             <Label>
-              Время доставки <span className="text-rose-500">*</span>
+              Время доставки <span className="text-primary">*</span>
             </Label>
             <Select
               value={deliverySlot || undefined}
@@ -265,7 +265,7 @@ export function CheckoutDialog({ open, onOpenChange }: CheckoutDialogProps) {
 
           <div className="flex items-center justify-between">
             <span className="font-semibold text-slate-700">Итого:</span>
-            <span className="text-xl font-bold text-rose-600">
+            <span className="text-xl font-display text-primary">
               {currentTotal.toLocaleString('ru-RU')} ₽
             </span>
           </div>
@@ -282,7 +282,7 @@ export function CheckoutDialog({ open, onOpenChange }: CheckoutDialogProps) {
           <Button
             onClick={handleSubmit}
             disabled={submitting}
-            className="bg-rose-500 hover:bg-rose-600 text-white cursor-pointer"
+            className="bg-primary hover:bg-primary/90 text-primary-foreground cursor-pointer rounded-none"
           >
             {submitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
             {submitting ? 'Оформляем...' : 'Подтвердить заказ'}
