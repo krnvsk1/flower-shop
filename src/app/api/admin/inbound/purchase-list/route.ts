@@ -5,10 +5,10 @@ import { NextRequest, NextResponse } from 'next/server'
 const LOW_STOCK = 5
 const TARGET_STOCK = 15
 
-function toCsv(rows: { name: string; category: string | null; stock: number; suggestedQty: number }[]) {
-  const header = 'Название;Категория;Остаток;Заказать'
+function toCsv(rows: { name: string; category: string | null; stock: number; suggestedQty: number; costPrice: number | null }[]) {
+  const header = 'Название;Категория;Остаток;Заказать;Закупочная цена'
   const body = rows.map((row) =>
-    [row.name, row.category || '', String(row.stock), String(row.suggestedQty)]
+    [row.name, row.category || '', String(row.stock), String(row.suggestedQty), row.costPrice == null ? '' : String(row.costPrice)]
       .map((cell) => `"${cell.replace(/"/g, '""')}"`)
       .join(';')
   )
@@ -23,7 +23,7 @@ export async function GET(req: NextRequest) {
     const flowers = await db.flower.findMany({
       where: { active: true, stock: { lte: LOW_STOCK } },
       orderBy: { stock: 'asc' },
-      select: { id: true, name: true, category: true, stock: true },
+      select: { id: true, name: true, category: true, stock: true, costPrice: true },
     })
 
     const items = flowers.map((flower) => ({

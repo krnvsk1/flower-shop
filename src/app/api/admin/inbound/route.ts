@@ -30,10 +30,19 @@ export async function POST(req: NextRequest) {
     const items = Array.isArray(body.items) ? body.items : []
 
     const cleaned = items
-      .map((item: { flowerId?: string; quantity?: number }) => ({
-        flowerId: String(item.flowerId || ''),
-        quantity: Math.round(Number(item.quantity)),
-      }))
+      .map((item: { flowerId?: string; quantity?: number; costPrice?: number | null }) => {
+        const rawCost = item.costPrice
+        const costPrice =
+          rawCost == null || rawCost === ''
+            ? null
+            : Number(String(rawCost).replace(',', '.'))
+        return {
+          flowerId: String(item.flowerId || ''),
+          quantity: Math.round(Number(item.quantity)),
+          costPrice:
+            costPrice != null && Number.isFinite(costPrice) && costPrice >= 0 ? costPrice : null,
+        }
+      })
       .filter((item) => item.flowerId && Number.isFinite(item.quantity) && item.quantity > 0)
 
     if (cleaned.length === 0) {
@@ -61,6 +70,7 @@ export async function POST(req: NextRequest) {
               flowerId: item.flowerId,
               flowerName: byId.get(item.flowerId)!.name,
               quantity: item.quantity,
+              costPrice: item.costPrice,
             })),
           },
         },
@@ -70,7 +80,10 @@ export async function POST(req: NextRequest) {
       for (const item of cleaned) {
         await tx.flower.update({
           where: { id: item.flowerId },
-          data: { stock: { increment: item.quantity } },
+          data: {
+            stock: { increment: item.quantity },
+            ...(item.costPrice != null ? { costPrice: item.costPrice } : {}),
+          },
         })
       }
 

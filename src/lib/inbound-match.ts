@@ -4,6 +4,7 @@ export type CatalogFlower = {
   id: string
   name: string
   stock: number
+  costPrice?: number | null
 }
 
 export type MatchedInboundRow = ParsedInboundRow & {

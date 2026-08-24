@@ -23,17 +23,21 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json()
-    const { name, description, price, stock, imageUrl, category } = body
+    const { name, description, price, costPrice, stock, imageUrl, category } = body
 
     if (!name || price == null || stock == null) {
       return NextResponse.json({ error: 'Name, price, and stock are required' }, { status: 400 })
     }
+
+    const parsedCost =
+      costPrice === '' || costPrice == null ? null : Number(costPrice)
 
     const flower = await db.flower.create({
       data: {
         name,
         description: description ?? null,
         price: Number(price),
+        costPrice: parsedCost != null && Number.isFinite(parsedCost) ? parsedCost : null,
         stock: Number(stock),
         imageUrl: imageUrl ?? null,
         category: category ?? null,

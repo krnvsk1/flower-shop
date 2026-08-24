@@ -25,12 +25,13 @@ import { Separator } from '@/components/ui/separator'
 import { Badge } from '@/components/ui/badge'
 import { Download, FileUp, PackagePlus } from 'lucide-react'
 
-type FlowerOption = { id: string; name: string; stock: number }
+type FlowerOption = { id: string; name: string; stock: number; costPrice: number | null }
 
 type PreviewRow = {
   line: number
   name: string
   quantity: number
+  costPrice: number | null
   flowerId: string | null
   matchedName: string | null
   confidence: 'exact' | 'fuzzy' | 'none'
@@ -41,7 +42,7 @@ type InboundRecord = {
   fileName: string | null
   note: string | null
   createdAt: string
-  items: { id: string; flowerName: string; quantity: number }[]
+  items: { id: string; flowerName: string; quantity: number; costPrice: number | null }[]
 }
 
 type PurchaseItem = {
@@ -50,6 +51,7 @@ type PurchaseItem = {
   category: string | null
   stock: number
   suggestedQty: number
+  costPrice: number | null
 }
 
 export function InboundManager() {
@@ -63,6 +65,7 @@ export function InboundManager() {
   const [rows, setRows] = useState<PreviewRow[]>([])
   const [manualFlower, setManualFlower] = useState('')
   const [manualQty, setManualQty] = useState('')
+  const [manualCost, setManualCost] = useState('')
 
   const load = useCallback(async () => {
     try {
@@ -73,7 +76,12 @@ export function InboundManager() {
       ])
       if (flowersRes.ok) {
         const all = await flowersRes.json()
-        setFlowers(all.map((f: FlowerOption) => ({ id: f.id, name: f.name, stock: f.stock })))
+        setFlowers(all.map((f: FlowerOption) => ({
+          id: f.id,
+          name: f.name,
+          stock: f.stock,
+          costPrice: f.costPrice ?? null,
+        })))
       }
       if (historyRes.ok) setHistory(await historyRes.json())
       if (purchaseRes.ok) {
@@ -125,8 +133,13 @@ export function InboundManager() {
   const applyManual = async () => {
     const flower = flowers.find((f) => f.id === manualFlower)
     const quantity = parseInt(manualQty, 10)
+    const costPrice = manualCost === '' ? null : Number(manualCost.replace(',', '.'))
     if (!flower || !Number.isFinite(quantity) || quantity <= 0) {
       toast.error('Выберите цветок и количество')
+      return
+    }
+    if (costPrice != null && (!Number.isFinite(costPrice) || costPrice < 0)) {
+      toast.error('Некорректная закупочная цена')
       return
     }
     setSaving(true)
@@ -136,7 +149,7 @@ export function InboundManager() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           fileName: 'ручной ввод',
-          items: [{ flowerId: flower.id, quantity }],
+          items: [{ flowerId: flower.id, quantity, costPrice }],
         }),
       })
       const data = await res.json()
@@ -147,6 +160,7 @@ export function InboundManager() {
       toast.success(`${flower.name}: +${quantity} шт.`)
       setManualFlower('')
       setManualQty('')
+      setManualCost('')
       await load()
     } catch {
       toast.error('Сетевая ошибка')
@@ -167,7 +181,11 @@ export function InboundManager() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           fileName,
-          items: readyRows.map((row) => ({ flowerId: row.flowerId, quantity: row.quantity })),
+          items: readyRows.map((row) => ({
+            flowerId: row.flowerId,
+            quantity: row.quantity,
+            costPrice: row.costPrice,
+          })),
         }),
       })
       const data = await res.json()
@@ -242,10 +260,17 @@ export function InboundManager() {
           Без файла: выберите цветок и сколько пришло — остаток увеличится сразу.
         </p>
         <Separator />
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
           <div className="space-y-2 sm:col-span-2">
             <Label>Цветок</Label>
-            <Select value={manualFlower || undefined} onValueChange={setManualFlower}>
+            <Select
+              value={manualFlower || undefined}
+              onValueChange={(id) => {
+                setManualFlower(id)
+                const flower = flowers.find((f) => f.id === id)
+                if (flower?.costPrice != null) setManualCost(String(flower.costPrice))
+              }}
+            >
               <SelectTrigger>
                 <SelectValue placeholder="Выберите цветок" />
               </SelectTrigger>
@@ -266,6 +291,18 @@ export function InboundManager() {
               min="1"
               value={manualQty}
               onChange={(e) => setManualQty(e.target.value)}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="inbound-cost">Закупочная цена</Label>
+            <Input
+              id="inbound-cost"
+              type="number"
+              min="0"
+              step="0.01"
+              placeholder="необязательно"
+              value={manualCost}
+              onChange={(e) => setManualCost(e.target.value)}
             />
           </div>
           <div className="flex items-end">
@@ -310,6 +347,7 @@ export function InboundManager() {
                 <TableRow className="bg-muted/50">
                   <TableHead>Из документа</TableHead>
                   <TableHead className="w-[100px] text-right">Кол-во</TableHead>
+                  <TableHead className="w-[130px] text-right">Закуп. цена</TableHead>
                   <TableHead>Товар в каталоге</TableHead>
                 </TableRow>
               </TableHeader>
@@ -318,6 +356,29 @@ export function InboundManager() {
                   <TableRow key={`${row.line}-${index}`}>
                     <TableCell className="font-medium">{row.name}</TableCell>
                     <TableCell className="text-right font-mono">{row.quantity}</TableCell>
+                    <TableCell className="text-right">
+                      <Input
+                        className="h-8 w-[110px] ml-auto text-right font-mono"
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={row.costPrice ?? ''}
+                        onChange={(e) => {
+                          const raw = e.target.value
+                          const next = raw === '' ? null : Number(raw.replace(',', '.'))
+                          setRows((prev) =>
+                            prev.map((item, i) =>
+                              i === index
+                                ? {
+                                    ...item,
+                                    costPrice: next != null && Number.isFinite(next) ? next : null,
+                                  }
+                                : item
+                            )
+                          )
+                        }}
+                      />
+                    </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <Select
@@ -332,6 +393,7 @@ export function InboundManager() {
                                       flowerId: value === 'none' ? null : value,
                                       matchedName: flower?.name ?? null,
                                       confidence: value === 'none' ? 'none' : 'exact',
+                                      costPrice: item.costPrice ?? flower?.costPrice ?? null,
                                     }
                                   : item
                               )
@@ -384,6 +446,7 @@ export function InboundManager() {
                 <TableHead>Товар</TableHead>
                 <TableHead className="text-right">Остаток</TableHead>
                 <TableHead className="text-right">Заказать</TableHead>
+                <TableHead className="text-right">Закуп. цена</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -393,11 +456,12 @@ export function InboundManager() {
                     <TableCell><Skeleton className="h-4 w-40" /></TableCell>
                     <TableCell><Skeleton className="h-4 w-10 ml-auto" /></TableCell>
                     <TableCell><Skeleton className="h-4 w-10 ml-auto" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-10 ml-auto" /></TableCell>
                   </TableRow>
                 ))
               ) : purchase.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={3} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
                     Низкого остатка нет
                   </TableCell>
                 </TableRow>
@@ -412,6 +476,9 @@ export function InboundManager() {
                     </TableCell>
                     <TableCell className="text-right font-mono text-rose-600">{item.stock}</TableCell>
                     <TableCell className="text-right font-mono font-medium">{item.suggestedQty}</TableCell>
+                    <TableCell className="text-right font-mono text-muted-foreground">
+                      {item.costPrice != null ? `${item.costPrice} ₽` : '—'}
+                    </TableCell>
                   </TableRow>
                 ))
               )}
@@ -453,7 +520,13 @@ export function InboundManager() {
                   <TableRow key={item.id}>
                     <TableCell className="font-medium">{item.fileName || 'вручную'}</TableCell>
                     <TableCell className="text-sm text-muted-foreground">
-                      {item.items.map((line) => `${line.flowerName} +${line.quantity}`).join(', ')}
+                      {item.items
+                        .map((line) =>
+                          line.costPrice != null
+                            ? `${line.flowerName} +${line.quantity} (${line.costPrice} ₽)`
+                            : `${line.flowerName} +${line.quantity}`
+                        )
+                        .join(', ')}
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">{formatDate(item.createdAt)}</TableCell>
                   </TableRow>

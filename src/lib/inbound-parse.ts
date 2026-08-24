@@ -2,6 +2,7 @@ export type ParsedInboundRow = {
   line: number
   name: string
   quantity: number
+  costPrice: number | null
 }
 
 const NAME_HEADERS = [
@@ -14,6 +15,14 @@ const NAME_HEADERS = [
   'name',
   'product',
   'item',
+]
+
+const COST_HEADERS = [
+  'закупочная',
+  'закупк',
+  'себестоимость',
+  'cost',
+  'purchase',
 ]
 
 const QTY_HEADERS = [
@@ -93,6 +102,23 @@ function parseQuantity(value: string) {
   return Number.isFinite(qty) && qty > 0 ? qty : null
 }
 
+function parseMoney(value: string) {
+  const cleaned = value.replace(/\s/g, '').replace(',', '.')
+  const match = cleaned.match(/(\d+(?:\.\d+)?)/)
+  if (!match) return null
+  const amount = Number(match[1])
+  return Number.isFinite(amount) && amount >= 0 ? amount : null
+}
+
+function costHeaderIndex(headers: string[]) {
+  const specific = headerIndex(headers, COST_HEADERS)
+  if (specific >= 0) return specific
+  return headers.findIndex(
+    (header) =>
+      header.includes('цена') && !header.includes('рознич') && !header.includes('продаж')
+  )
+}
+
 function looksLikeHeader(cells: string[]) {
   const joined = cells.map(normalizeHeader).join(' ')
   return NAME_HEADERS.some((h) => joined.includes(h)) && QTY_HEADERS.some((h) => joined.includes(h))
@@ -111,6 +137,7 @@ export function parseCsvInbound(text: string): ParsedInboundRow[] {
   let start = 0
   let nameIdx = 0
   let qtyIdx = 1
+  let costIdx = -1
 
   if (looksLikeHeader(rows[0])) {
     const headers = rows[0].map(normalizeHeader)
@@ -118,9 +145,12 @@ export function parseCsvInbound(text: string): ParsedInboundRow[] {
     const foundQty = headerIndex(headers, QTY_HEADERS)
     if (foundName >= 0) nameIdx = foundName
     if (foundQty >= 0) qtyIdx = foundQty
+    costIdx = costHeaderIndex(headers)
     start = 1
   } else if (rows[0].length === 1) {
     qtyIdx = -1
+  } else if (rows[0].length >= 3) {
+    costIdx = 2
   }
 
   const parsed: ParsedInboundRow[] = []
@@ -140,7 +170,10 @@ export function parseCsvInbound(text: string): ParsedInboundRow[] {
     }
     if (quantity == null) continue
 
-    parsed.push({ line: i + 1, name, quantity })
+    const costPrice =
+      costIdx >= 0 && cells[costIdx] ? parseMoney(cells[costIdx]) : null
+
+    parsed.push({ line: i + 1, name, quantity, costPrice })
   }
 
   return parsed

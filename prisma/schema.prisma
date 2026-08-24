@@ -12,7 +12,8 @@ model Flower {
   id          String     @id @default(cuid())
   name        String     // название: "Роза красная", "Тюльпан жёлтый"
   description String?    // описание
-  price       Float      // цена за штуку
+  price       Float      // цена продажи за штуку
+  costPrice   Float?     // закупочная цена за штуку
   stock       Int        @default(0) // остаток на складе
   imageUrl    String?    // ссылка на фото (optional)
   category    String?    // категория: "розы", "тюльпаны", "сезонные"
@@ -89,6 +90,7 @@ model StockInboundItem {
   flowerId   String
   flowerName String
   quantity   Int
+  costPrice  Float?  // закупочная цена на момент прихода
 
   inbound    StockInbound @relation(fields: [inboundId], references: [id], onDelete: Cascade)
   flower     Flower       @relation(fields: [flowerId], references: [id])

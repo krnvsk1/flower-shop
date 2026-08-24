@@ -39,6 +39,7 @@ type Flower = {
   name: string
   description: string | null
   price: number
+  costPrice: number | null
   stock: number
   imageUrl: string | null
   category: string | null
@@ -53,6 +54,7 @@ const emptyForm = {
   name: '',
   description: '',
   price: '',
+  costPrice: '',
   stock: '',
   imageUrl: '',
   category: '',
@@ -72,6 +74,7 @@ export function FlowerManager({ lowStockOnly = false }: { lowStockOnly?: boolean
   })
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [priceDrafts, setPriceDrafts] = useState<Record<string, string>>({})
+  const [costDrafts, setCostDrafts] = useState<Record<string, string>>({})
   const [stockDrafts, setStockDrafts] = useState<Record<string, string>>({})
   const [newCategory, setNewCategory] = useState('')
 
@@ -112,6 +115,7 @@ export function FlowerManager({ lowStockOnly = false }: { lowStockOnly?: boolean
         name: form.name.trim(),
         description: form.description.trim() || null,
         price: parseFloat(form.price),
+        costPrice: form.costPrice === '' ? null : parseFloat(form.costPrice.replace(',', '.')),
         stock: parseInt(form.stock, 10),
         imageUrl: form.imageUrl.trim() || null,
         category: form.category || null,
@@ -192,6 +196,46 @@ export function FlowerManager({ lowStockOnly = false }: { lowStockOnly?: boolean
       toast.error('Не удалось сохранить цену')
     } finally {
       setPriceDrafts((p) => {
+        const copy = { ...p }
+        delete copy[flower.id]
+        return copy
+      })
+    }
+  }
+
+  const saveCost = async (flower: Flower) => {
+    const raw = costDrafts[flower.id]
+    if (raw === undefined) return
+    const trimmed = raw.trim()
+    const next = trimmed === '' ? null : Number(trimmed.replace(',', '.'))
+    if (next != null && (!Number.isFinite(next) || next < 0)) {
+      toast.error('Некорректная закупочная цена')
+      setCostDrafts((p) => {
+        const copy = { ...p }
+        delete copy[flower.id]
+        return copy
+      })
+      return
+    }
+    if (next === flower.costPrice) {
+      setCostDrafts((p) => {
+        const copy = { ...p }
+        delete copy[flower.id]
+        return copy
+      })
+      return
+    }
+    try {
+      await patchFlower(flower.id, { costPrice: next })
+      toast.success(
+        next == null
+          ? `Закупка «${flower.name}» очищена`
+          : `Закупка «${flower.name}»: ${next.toLocaleString('ru-RU')} ₽`
+      )
+    } catch {
+      toast.error('Не удалось сохранить закупочную цену')
+    } finally {
+      setCostDrafts((p) => {
         const copy = { ...p }
         delete copy[flower.id]
         return copy
@@ -284,6 +328,7 @@ export function FlowerManager({ lowStockOnly = false }: { lowStockOnly?: boolean
       name: flower.name,
       description: flower.description ?? '',
       price: flower.price.toString(),
+      costPrice: flower.costPrice != null ? String(flower.costPrice) : '',
       stock: flower.stock.toString(),
       imageUrl: flower.imageUrl ?? '',
       category: flower.category ?? '',
@@ -393,6 +438,7 @@ export function FlowerManager({ lowStockOnly = false }: { lowStockOnly?: boolean
                   <TableHead className="min-w-[160px]">Название</TableHead>
                   <TableHead className="min-w-[100px]">Категория</TableHead>
                   <TableHead className="min-w-[110px] text-right">Цена</TableHead>
+                  <TableHead className="min-w-[110px] text-right">Закупка</TableHead>
                   <TableHead className="min-w-[90px] text-right">Остаток</TableHead>
                   <TableHead className="min-w-[90px] text-center">Статус</TableHead>
                   <TableHead className="min-w-[120px] text-right">Действия</TableHead>
@@ -402,12 +448,12 @@ export function FlowerManager({ lowStockOnly = false }: { lowStockOnly?: boolean
                 {loading ? (
                   Array.from({ length: 5 }).map((_, i) => (
                     <TableRow key={i}>
-                      <TableCell colSpan={7}><Skeleton className="h-4 w-full" /></TableCell>
+                      <TableCell colSpan={8}><Skeleton className="h-4 w-full" /></TableCell>
                     </TableRow>
                   ))
                 ) : visibleFlowers.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                       {flowers.length === 0
                         ? 'Нет товаров. Добавьте первый!'
                         : 'Нет товаров с низким остатком'}
@@ -448,6 +494,19 @@ export function FlowerManager({ lowStockOnly = false }: { lowStockOnly?: boolean
                             setPriceDrafts((p) => ({ ...p, [f.id]: e.target.value }))
                           }
                           onBlur={() => void savePrice(f)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
+                          }}
+                        />
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Input
+                          className="h-8 w-[100px] ml-auto text-right font-mono"
+                          value={costDrafts[f.id] ?? (f.costPrice == null ? '' : String(f.costPrice))}
+                          onChange={(e) =>
+                            setCostDrafts((p) => ({ ...p, [f.id]: e.target.value }))
+                          }
+                          onBlur={() => void saveCost(f)}
                           onKeyDown={(e) => {
                             if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
                           }}
@@ -513,7 +572,7 @@ export function FlowerManager({ lowStockOnly = false }: { lowStockOnly?: boolean
           </div>
         </div>
         <p className="text-xs text-muted-foreground mt-2">
-          Цену и остаток можно менять прямо в таблице — сохраняется при уходе с поля.
+          Цену продажи, закупку и остаток можно менять прямо в таблице — сохраняется при уходе с поля.
         </p>
       </TabsContent>
 
@@ -540,9 +599,9 @@ export function FlowerManager({ lowStockOnly = false }: { lowStockOnly?: boolean
               />
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="flower-price">Цена (₽) *</Label>
+                <Label htmlFor="flower-price">Цена продажи (₽) *</Label>
                 <Input
                   id="flower-price"
                   type="number"
@@ -551,6 +610,18 @@ export function FlowerManager({ lowStockOnly = false }: { lowStockOnly?: boolean
                   placeholder="150"
                   value={form.price}
                   onChange={(e) => setForm((p) => ({ ...p, price: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="flower-cost">Закупочная цена (₽)</Label>
+                <Input
+                  id="flower-cost"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  placeholder="80"
+                  value={form.costPrice}
+                  onChange={(e) => setForm((p) => ({ ...p, costPrice: e.target.value }))}
                 />
               </div>
               <div className="space-y-2">

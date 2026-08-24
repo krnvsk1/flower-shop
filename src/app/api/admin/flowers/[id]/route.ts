@@ -19,6 +19,10 @@ export async function PUT(
         ...(body.name !== undefined && { name: body.name }),
         ...(body.description !== undefined && { description: body.description }),
         ...(body.price !== undefined && { price: Number(body.price) }),
+        ...(body.costPrice !== undefined && {
+          costPrice:
+            body.costPrice === '' || body.costPrice == null ? null : Number(body.costPrice),
+        }),
         ...(body.stock !== undefined && { stock: Number(body.stock) }),
         ...(body.imageUrl !== undefined && { imageUrl: body.imageUrl }),
         ...(body.category !== undefined && { category: body.category }),

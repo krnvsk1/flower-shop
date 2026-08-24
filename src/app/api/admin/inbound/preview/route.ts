@@ -37,11 +37,16 @@ export async function POST(req: NextRequest) {
     }
 
     const flowers = await db.flower.findMany({
-      select: { id: true, name: true, stock: true },
+      select: { id: true, name: true, stock: true, costPrice: true },
       orderBy: { name: 'asc' },
     })
 
-    const matched = matchInboundRows(rows, flowers)
+    const matched = matchInboundRows(rows, flowers).map((row) => {
+      if (row.costPrice != null) return row
+      const flower = flowers.find((item) => item.id === row.flowerId)
+      return { ...row, costPrice: flower?.costPrice ?? null }
+    })
+
     return NextResponse.json({
       fileName: file.name,
       rows: matched,
