@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
 
 export interface CartItem {
   flowerId: string;
@@ -18,51 +19,88 @@ interface CartStore {
   itemCount: () => number;
 }
 
-export const useCartStore = create<CartStore>((set, get) => ({
-  items: [],
+function sanitizeItems(raw: unknown): CartItem[] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .map((item) => {
+      if (!item || typeof item !== 'object') return null;
+      const row = item as Record<string, unknown>;
+      const flowerId = typeof row.flowerId === 'string' ? row.flowerId : '';
+      const name = typeof row.name === 'string' ? row.name : '';
+      const price = Number(row.price);
+      const quantity = Math.floor(Number(row.quantity));
+      if (!flowerId || !name || !Number.isFinite(price) || !Number.isFinite(quantity) || quantity <= 0) {
+        return null;
+      }
+      return {
+        flowerId,
+        name,
+        price,
+        quantity,
+        imageUrl: typeof row.imageUrl === 'string' ? row.imageUrl : row.imageUrl === null ? null : undefined,
+      } satisfies CartItem;
+    })
+    .filter((item): item is CartItem => item !== null);
+}
 
-  addItem: (item: CartItem) => {
-    const { items } = get();
-    const existing = items.find((i) => i.flowerId === item.flowerId);
+export const useCartStore = create<CartStore>()(
+  persist(
+    (set, get) => ({
+      items: [],
 
-    if (existing) {
-      set({
-        items: items.map((i) =>
-          i.flowerId === item.flowerId
-            ? { ...i, quantity: i.quantity + item.quantity }
-            : i
-        ),
-      });
-    } else {
-      set({ items: [...items, { ...item, quantity: item.quantity || 1 }] });
+      addItem: (item: CartItem) => {
+        const { items } = get();
+        const existing = items.find((i) => i.flowerId === item.flowerId);
+
+        if (existing) {
+          set({
+            items: items.map((i) =>
+              i.flowerId === item.flowerId
+                ? { ...i, quantity: i.quantity + item.quantity }
+                : i
+            ),
+          });
+        } else {
+          set({ items: [...items, { ...item, quantity: item.quantity || 1 }] });
+        }
+      },
+
+      removeItem: (flowerId: string) => {
+        set({ items: get().items.filter((i) => i.flowerId !== flowerId) });
+      },
+
+      updateQuantity: (flowerId: string, quantity: number) => {
+        if (quantity <= 0) {
+          get().removeItem(flowerId);
+          return;
+        }
+        set({
+          items: get().items.map((i) =>
+            i.flowerId === flowerId ? { ...i, quantity } : i
+          ),
+        });
+      },
+
+      clearCart: () => {
+        set({ items: [] });
+      },
+
+      total: () => {
+        return get().items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+      },
+
+      itemCount: () => {
+        return get().items.reduce((sum, item) => sum + item.quantity, 0);
+      },
+    }),
+    {
+      name: 'atelier-cart',
+      storage: createJSONStorage(() => localStorage),
+      partialize: (state) => ({ items: state.items }),
+      merge: (persisted, current) => ({
+        ...current,
+        items: sanitizeItems((persisted as { items?: unknown } | undefined)?.items),
+      }),
     }
-  },
-
-  removeItem: (flowerId: string) => {
-    set({ items: get().items.filter((i) => i.flowerId !== flowerId) });
-  },
-
-  updateQuantity: (flowerId: string, quantity: number) => {
-    if (quantity <= 0) {
-      get().removeItem(flowerId);
-      return;
-    }
-    set({
-      items: get().items.map((i) =>
-        i.flowerId === flowerId ? { ...i, quantity } : i
-      ),
-    });
-  },
-
-  clearCart: () => {
-    set({ items: [] });
-  },
-
-  total: () => {
-    return get().items.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  },
-
-  itemCount: () => {
-    return get().items.reduce((sum, item) => sum + item.quantity, 0);
-  },
-}));
+  )
+);

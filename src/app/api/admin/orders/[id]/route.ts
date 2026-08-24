@@ -25,17 +25,17 @@ export async function PATCH(
     // If cancelling an order — handle stock based on choice
     if (status === 'cancelled' && previousStatus !== 'cancelled') {
       if (restoreStock === true) {
-        // Restore stock back to warehouse
         await Promise.all(
-          existingOrder.items.map((item) =>
-            db.flower.update({
-              where: { id: item.flowerId },
-              data: { stock: { increment: item.quantity } },
-            })
-          )
+          existingOrder.items
+            .filter((item) => item.flowerId)
+            .map((item) =>
+              db.flower.update({
+                where: { id: item.flowerId as string },
+                data: { stock: { increment: item.quantity } },
+              })
+            )
         )
       } else if (restoreStock === false) {
-        // Write off — stock stays deducted, create write-off records
         await Promise.all(
           existingOrder.items.map((item) =>
             db.writeOff.create({

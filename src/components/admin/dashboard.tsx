@@ -15,6 +15,8 @@ import {
   ClipboardList,
   ArrowRight,
 } from 'lucide-react'
+import { LowStockSettings } from '@/components/admin/low-stock-settings'
+import type { StockSettings } from '@/lib/stock-settings'
 
 type RecentOrder = {
   id: string
@@ -45,6 +47,7 @@ type DashboardStats = {
   lowStockCount: number
   recentOrders: RecentOrder[]
   lowStockItems: LowStockItem[]
+  stockSettings: StockSettings
 }
 
 export type DashboardNav = {
@@ -84,7 +87,7 @@ const statCards: {
     icon: AlertTriangle,
     color: 'bg-rose-100 text-rose-600',
     border: 'border-rose-200',
-    nav: { tab: 'inbound' },
+    nav: { tab: 'flowers', lowStock: true },
   },
   {
     key: 'totalRevenue',
@@ -292,7 +295,8 @@ export function Dashboard({ onNavigate }: { onNavigate: (nav: DashboardNav) => v
               К закупке
             </Button>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
+            <LowStockSettings compact value={stats.stockSettings} onSaved={() => void load()} />
             {stats.lowStockItems.length === 0 ? (
               <p className="text-sm text-muted-foreground py-6 text-center">
                 Остатки в норме

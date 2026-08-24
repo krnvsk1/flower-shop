@@ -91,6 +91,7 @@ export async function POST(request: NextRequest) {
               : null,
           comment:
             typeof comment === 'string' && comment.trim() ? comment.trim() : null,
+          source: 'online',
           totalAmount,
           items: {
             create: validatedItems.map((item) => ({

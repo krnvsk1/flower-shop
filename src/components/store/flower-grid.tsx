@@ -1,11 +1,8 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Search, Flower2 } from 'lucide-react';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { Skeleton } from '@/components/ui/skeleton';
 import { FlowerCard, type Flower } from './flower-card';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export function FlowerGrid() {
   const [flowers, setFlowers] = useState<Flower[]>([]);
@@ -13,6 +10,7 @@ export function FlowerGrid() {
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState('Все');
+  const [selectedId, setSelectedId] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchFlowers = async () => {
@@ -51,85 +49,92 @@ export function FlowerGrid() {
     });
   }, [flowers, activeCategory, searchQuery]);
 
+  useEffect(() => {
+    setSelectedId(null);
+  }, [activeCategory, searchQuery]);
+
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center py-20 text-center">
-        <Flower2 className="w-12 h-12 text-slate-300 mb-4" />
-        <p className="text-slate-500 text-lg">Не удалось загрузить цветы</p>
-        <p className="text-slate-400 text-sm mt-1">Пожалуйста, попробуйте позже</p>
+      <div className="px-5 sm:px-8 lg:px-12 py-24 text-center">
+        <p className="font-display text-3xl">Не удалось загрузить коллекцию</p>
+        <p className="text-muted-foreground mt-2 text-sm">Попробуйте обновить страницу</p>
       </div>
     );
   }
 
   return (
-    <section className="w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-      <div className="flex flex-col gap-6 mb-10">
-        <div className="flex items-end justify-between gap-4">
-          <div>
-            <p className="text-[11px] tracking-[0.28em] uppercase text-brass mb-1">Каталог</p>
-            <h3 className="font-display text-3xl font-semibold">Коллекция</h3>
-          </div>
+    <section id="collection" className="w-full px-5 sm:px-8 lg:px-12 scroll-mt-24">
+      <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-8 mb-10">
+        <div>
+          <p className="text-[11px] tracking-[0.32em] uppercase text-brass mb-2">Каталог</p>
+          <h2 className="font-display text-5xl sm:text-7xl leading-[0.9] font-medium">
+            Коллекция
+          </h2>
         </div>
-        <div className="relative max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input
-            placeholder="Найти букет или цветок"
+        <div className="flex flex-col sm:items-end gap-4 max-w-xl w-full">
+          <input
+            placeholder="Найти букет"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10 bg-card border-border focus-visible:ring-primary rounded-none h-11"
+            className="w-full sm:w-72 bg-transparent border-0 border-b border-border rounded-none h-10 px-0 text-sm placeholder:text-muted-foreground focus:outline-none focus:border-foreground"
           />
-        </div>
-
-        <div className="flex flex-wrap gap-2">
-          {categories.map((cat) => (
-            <Button
-              key={cat}
-              variant={activeCategory === cat ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setActiveCategory(cat)}
-              className={
-                activeCategory === cat
-                  ? 'bg-primary hover:bg-primary/90 text-primary-foreground border-primary rounded-none'
-                  : 'border-border text-muted-foreground hover:bg-secondary hover:text-foreground rounded-none'
-              }
-            >
-              {cat}
-            </Button>
-          ))}
+          <div className="flex flex-wrap gap-x-5 gap-y-2 sm:justify-end">
+            {categories.map((cat) => (
+              <button
+                key={cat}
+                type="button"
+                onClick={() => setActiveCategory(cat)}
+                className={
+                  activeCategory === cat
+                    ? 'text-[11px] tracking-[0.2em] uppercase text-foreground border-b border-foreground pb-0.5 cursor-pointer'
+                    : 'text-[11px] tracking-[0.2em] uppercase text-muted-foreground hover:text-foreground cursor-pointer'
+                }
+              >
+                {cat}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
-      {/* Loading State */}
       {loading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="flex flex-col gap-3">
-              <Skeleton className="w-full aspect-[4/5] rounded-none bg-muted" />
-              <Skeleton className="h-5 w-3/4 bg-muted" />
-              <Skeleton className="h-4 w-full bg-muted" />
-              <Skeleton className="h-4 w-1/2 bg-muted" />
-              <Skeleton className="h-10 w-full bg-muted" />
-            </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <Skeleton
+              key={i}
+              className={`rounded-none bg-muted/80 ${i === 0 ? 'lg:col-span-2 aspect-[4/5]' : 'aspect-[3/4]'}`}
+            />
           ))}
         </div>
       ) : filteredFlowers.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 text-center">
-          <Flower2 className="w-12 h-12 text-slate-300 mb-4" />
-          <p className="text-slate-500 text-lg">
-            {searchQuery || activeCategory !== 'Все'
-              ? 'Ничего не найдено'
-              : 'Каталог пока пуст'}
-          </p>
-          <p className="text-slate-400 text-sm mt-1">
-            {searchQuery || activeCategory !== 'Все'
-              ? 'Попробуйте изменить параметры поиска'
-              : 'Скоро здесь появятся цветы'}
-          </p>
+        <div className="py-24 text-center">
+          <p className="font-display text-3xl">Ничего не найдено</p>
+          <p className="text-muted-foreground text-sm mt-2">Смените категорию или запрос</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredFlowers.map((flower) => (
-            <FlowerCard key={flower.id} flower={flower} />
+        <div className="relative grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 lg:gap-4">
+          {selectedId ? (
+            <button
+              type="button"
+              aria-label="Закрыть карточку"
+              className="fixed inset-0 z-20 bg-foreground/10 cursor-pointer"
+              onClick={() => setSelectedId(null)}
+            />
+          ) : null}
+          {filteredFlowers.map((flower, index) => (
+            <div
+              key={flower.id}
+              className={index === 0 ? 'sm:col-span-2 lg:col-span-2 lg:row-span-2' : ''}
+            >
+              <FlowerCard
+                flower={flower}
+                featured={index === 0}
+                expanded={selectedId === flower.id}
+                onToggle={() =>
+                  setSelectedId((id) => (id === flower.id ? null : flower.id))
+                }
+              />
+            </div>
           ))}
         </div>
       )}

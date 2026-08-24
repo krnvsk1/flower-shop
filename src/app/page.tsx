@@ -4,6 +4,7 @@ import { useState, useSyncExternalStore } from 'react';
 import Link from 'next/link';
 import { FlowerGrid } from '@/components/store/flower-grid';
 import { StoreHeader } from '@/components/store/store-header';
+import { StoreHero } from '@/components/store/store-hero';
 import { CartDrawer } from '@/components/store/cart-drawer';
 import { CheckoutDialog } from '@/components/store/checkout-dialog';
 
@@ -24,41 +25,30 @@ export default function Home() {
   const mounted = useIsMounted();
 
   return (
-    <div className="min-h-screen flex flex-col bg-background text-foreground">
+    <div className="storefront min-h-screen flex flex-col text-foreground">
       <StoreHeader onCartClick={() => setCartOpen(true)} />
+      <StoreHero />
 
-      <section className="border-b border-border/80">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-14 sm:py-20 text-center">
-          <p className="text-[11px] tracking-[0.35em] uppercase text-brass mb-4">
-            Доставка по городу
-          </p>
-          <h2 className="font-display text-4xl sm:text-5xl md:text-6xl font-semibold tracking-tight text-foreground leading-[1.1]">
-            Цветы с характером
-            <br />
-            и тихим блеском
-          </h2>
-          <div className="mx-auto mt-6 h-px w-16 bg-brass/70" />
-          <p className="mt-6 max-w-lg mx-auto text-muted-foreground text-[15px] leading-relaxed">
-            Свежий срез, спокойные букеты и композиции без лишнего шума.
-          </p>
-        </div>
-      </section>
-
-      <main className="flex-1 py-10 sm:py-14">
+      <main className="flex-1 pb-24 pt-6 sm:pt-10">
         <FlowerGrid />
       </main>
 
-      <footer className="border-t border-border py-8 mt-auto">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <p className="text-sm text-muted-foreground">Atelier · свежие цветы каждый день</p>
-          {mounted ? (
-            <Link
-              href="/admin"
-              className="text-[10px] tracking-widest uppercase text-muted-foreground/50 hover:text-muted-foreground transition-colors"
-            >
-              Кабинет
-            </Link>
-          ) : null}
+      <footer className="px-5 sm:px-8 lg:px-12 py-12 border-t border-border/60">
+        <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-8">
+          <div>
+            <p className="font-display italic text-5xl sm:text-7xl leading-none text-foreground">Atelier</p>
+            <p className="mt-3 max-w-xs text-sm text-muted-foreground">
+              Цветочный дом. Свежий срез каждый день.
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-6 text-[11px] tracking-[0.2em] uppercase text-muted-foreground">
+            <span>Самовывоз и доставка</span>
+            {mounted ? (
+              <Link href="/admin" className="hover:text-foreground transition-colors">
+                Кабинет
+              </Link>
+            ) : null}
+          </div>
         </div>
       </footer>
 

@@ -1,5 +1,6 @@
 import { db } from '@/lib/db'
 import { requireAdmin } from '@/lib/admin-auth'
+import { resolveImageUrl } from '@/lib/image-url'
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function GET() {
@@ -23,10 +24,10 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json()
-    const { name, description, price, costPrice, stock, imageUrl, category } = body
+    const { name, description, price, costPrice, imageUrl, category } = body
 
-    if (!name || price == null || stock == null) {
-      return NextResponse.json({ error: 'Name, price, and stock are required' }, { status: 400 })
+    if (!name || price == null) {
+      return NextResponse.json({ error: 'Name and price are required' }, { status: 400 })
     }
 
     const parsedCost =
@@ -38,8 +39,8 @@ export async function POST(req: NextRequest) {
         description: description ?? null,
         price: Number(price),
         costPrice: parsedCost != null && Number.isFinite(parsedCost) ? parsedCost : null,
-        stock: Number(stock),
-        imageUrl: imageUrl ?? null,
+        stock: 0,
+        imageUrl: await resolveImageUrl(imageUrl),
         category: category ?? null,
         active: true,
       },

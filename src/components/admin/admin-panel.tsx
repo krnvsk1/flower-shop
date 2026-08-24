@@ -21,7 +21,7 @@ export type TabKey = 'dashboard' | 'flowers' | 'orders' | 'inbound' | 'writeoffs
 const NAV_ITEMS: { key: TabKey; label: string; description: string; icon: typeof LayoutDashboard }[] = [
   { key: 'dashboard', label: 'Панель управления', description: 'Общая статистика магазина', icon: LayoutDashboard },
   { key: 'flowers', label: 'Товары', description: 'Управление ассортиментом цветов', icon: Flower2 },
-  { key: 'orders', label: 'Заказы', description: 'Обработка и отслеживание заказов', icon: ShoppingCart },
+  { key: 'orders', label: 'Заказы', description: 'Онлайн-заказы и продажа в зале', icon: ShoppingCart },
   { key: 'inbound', label: 'Приход', description: 'Накладные и список закупки', icon: PackagePlus },
   { key: 'writeoffs', label: 'Списания', description: 'Учёт испорченных товаров', icon: PackageX },
 ]

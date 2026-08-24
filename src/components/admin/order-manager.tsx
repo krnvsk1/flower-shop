@@ -30,6 +30,9 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { RefreshCw, AlertTriangle, PackageCheck, PackageX, ChevronDown, Phone } from 'lucide-react'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { PosSale } from '@/components/admin/pos-sale'
+import { paymentLabel } from '@/lib/payment'
 
 type OrderItem = {
   id: string
@@ -46,6 +49,8 @@ type Order = {
   address: string | null
   deliverySlot: string | null
   comment: string | null
+  source?: string
+  paymentMethod?: string | null
   status: string
   totalAmount: number
   createdAt: string
@@ -173,7 +178,8 @@ export function OrderManager({ initialStatus = 'all' }: { initialStatus?: string
         o.clientName.toLowerCase().includes(q) ||
         o.clientPhone.toLowerCase().includes(q) ||
         (o.address ?? '').toLowerCase().includes(q) ||
-        o.id.toLowerCase().includes(q)
+        o.id.toLowerCase().includes(q) ||
+        paymentLabel(o.paymentMethod).toLowerCase().includes(q)
       )
     })
   }, [orders, filterStatus, query])
@@ -190,6 +196,21 @@ export function OrderManager({ initialStatus = 'all' }: { initialStatus?: string
     })
 
   return (
+    <Tabs defaultValue="list">
+      <TabsList className="mb-4">
+        <TabsTrigger value="list" className="cursor-pointer">
+          Заказы
+        </TabsTrigger>
+        <TabsTrigger value="pos" className="cursor-pointer">
+          Продажа в зале
+        </TabsTrigger>
+      </TabsList>
+
+      <TabsContent value="pos">
+        <PosSale onSold={() => void fetchOrders(true)} />
+      </TabsContent>
+
+      <TabsContent value="list">
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-3">
         {newCount > 0 && (
@@ -265,7 +286,14 @@ export function OrderManager({ initialStatus = 'all' }: { initialStatus?: string
                       <TableCell>
                         <ChevronDown className={`w-4 h-4 transition-transform ${open ? 'rotate-180' : ''}`} />
                       </TableCell>
-                      <TableCell className="font-medium">{order.clientName}</TableCell>
+                      <TableCell className="font-medium">
+                        <div>{order.clientName}</div>
+                        {order.source === 'walkin' ? (
+                          <Badge variant="outline" className="mt-1 font-normal">
+                            зал · {paymentLabel(order.paymentMethod)}
+                          </Badge>
+                        ) : null}
+                      </TableCell>
                       <TableCell>
                         <a
                           href={`tel:${order.clientPhone}`}
@@ -277,9 +305,9 @@ export function OrderManager({ initialStatus = 'all' }: { initialStatus?: string
                         </a>
                       </TableCell>
                       <TableCell className="text-sm">
-                        <div>{order.deliverySlot || '—'}</div>
+                        <div>{order.source === 'walkin' ? 'Самовывоз / зал' : order.deliverySlot || '—'}</div>
                         <div className="text-muted-foreground truncate max-w-[180px]">
-                          {order.address || 'Адрес не указан'}
+                          {order.source === 'walkin' ? 'Офлайн' : order.address || 'Адрес не указан'}
                         </div>
                       </TableCell>
                       <TableCell className="text-right font-mono">
@@ -333,6 +361,8 @@ export function OrderManager({ initialStatus = 'all' }: { initialStatus?: string
                             <div className="space-y-1">
                               <p><span className="text-muted-foreground">Адрес:</span> {order.address || '—'}</p>
                               <p><span className="text-muted-foreground">Время:</span> {order.deliverySlot || '—'}</p>
+                              <p><span className="text-muted-foreground">Источник:</span> {order.source === 'walkin' ? 'Продажа в зале' : 'Сайт'}</p>
+                              <p><span className="text-muted-foreground">Оплата:</span> {paymentLabel(order.paymentMethod)}</p>
                               <p><span className="text-muted-foreground">Комментарий:</span> {order.comment || '—'}</p>
                             </div>
                           </div>
@@ -403,5 +433,7 @@ export function OrderManager({ initialStatus = 'all' }: { initialStatus?: string
         </DialogContent>
       </Dialog>
     </div>
+      </TabsContent>
+    </Tabs>
   )
 }

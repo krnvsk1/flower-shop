@@ -1,9 +1,7 @@
 import { db } from '@/lib/db'
 import { requireAdmin } from '@/lib/admin-auth'
+import { getStockSettings } from '@/lib/stock-settings-store'
 import { NextRequest, NextResponse } from 'next/server'
-
-const LOW_STOCK = 5
-const TARGET_STOCK = 15
 
 function toCsv(rows: { name: string; category: string | null; stock: number; suggestedQty: number; costPrice: number | null }[]) {
   const header = 'Название;Категория;Остаток;Заказать;Закупочная цена'
@@ -20,15 +18,16 @@ export async function GET(req: NextRequest) {
   if (unauthorized) return unauthorized
 
   try {
+    const settings = await getStockSettings()
     const flowers = await db.flower.findMany({
-      where: { active: true, stock: { lte: LOW_STOCK } },
+      where: { active: true, stock: { lte: settings.threshold } },
       orderBy: { stock: 'asc' },
       select: { id: true, name: true, category: true, stock: true, costPrice: true },
     })
 
     const items = flowers.map((flower) => ({
       ...flower,
-      suggestedQty: Math.max(TARGET_STOCK - flower.stock, 1),
+      suggestedQty: Math.max(settings.targetStock - flower.stock, 1),
     }))
 
     if (req.nextUrl.searchParams.get('format') === 'csv') {
@@ -40,7 +39,12 @@ export async function GET(req: NextRequest) {
       })
     }
 
-    return NextResponse.json({ targetStock: TARGET_STOCK, lowStock: LOW_STOCK, items })
+    return NextResponse.json({
+      targetStock: settings.targetStock,
+      lowStockPercent: settings.lowStockPercent,
+      lowStock: settings.threshold,
+      items,
+    })
   } catch (error) {
     console.error('Purchase list error:', error)
     return NextResponse.json({ error: 'Failed to build purchase list' }, { status: 500 })

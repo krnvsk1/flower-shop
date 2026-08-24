@@ -23,7 +23,18 @@ import {
 } from '@/components/ui/select'
 import { Separator } from '@/components/ui/separator'
 import { Badge } from '@/components/ui/badge'
-import { Download, FileUp, PackagePlus } from 'lucide-react'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import { Download, FileUp, PackagePlus, Plus } from 'lucide-react'
+import { LowStockSettings } from '@/components/admin/low-stock-settings'
+import type { StockSettings } from '@/lib/stock-settings'
+import { normalizeName } from '@/lib/inbound-match'
 
 type FlowerOption = { id: string; name: string; stock: number; costPrice: number | null }
 
@@ -58,6 +69,7 @@ export function InboundManager() {
   const [flowers, setFlowers] = useState<FlowerOption[]>([])
   const [history, setHistory] = useState<InboundRecord[]>([])
   const [purchase, setPurchase] = useState<PurchaseItem[]>([])
+  const [stockSettings, setStockSettings] = useState<StockSettings | null>(null)
   const [loading, setLoading] = useState(true)
   const [parsing, setParsing] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -66,6 +78,12 @@ export function InboundManager() {
   const [manualFlower, setManualFlower] = useState('')
   const [manualQty, setManualQty] = useState('')
   const [manualCost, setManualCost] = useState('')
+  const [addDialog, setAddDialog] = useState<{
+    open: boolean
+    index: number
+    name: string
+    price: string
+  }>({ open: false, index: -1, name: '', price: '' })
 
   const load = useCallback(async () => {
     try {
@@ -87,6 +105,13 @@ export function InboundManager() {
       if (purchaseRes.ok) {
         const data = await purchaseRes.json()
         setPurchase(data.items || [])
+        if (data.targetStock != null && data.lowStockPercent != null && data.lowStock != null) {
+          setStockSettings({
+            targetStock: data.targetStock,
+            lowStockPercent: data.lowStockPercent,
+            threshold: data.lowStock,
+          })
+        }
       }
     } catch {
       toast.error('Ошибка загрузки прихода')
@@ -170,8 +195,12 @@ export function InboundManager() {
   }
 
   const applyInbound = async () => {
+    if (rows.length === 0 || unmatched > 0) {
+      toast.error('Сначала добавьте или привяжите все позиции из документа')
+      return
+    }
     if (readyRows.length === 0) {
-      toast.error('Сопоставьте хотя бы одну строку с товаром')
+      toast.error('Нет строк с количеством')
       return
     }
     setSaving(true)
@@ -204,6 +233,81 @@ export function InboundManager() {
     }
   }
 
+  const openAddDialog = (index: number) => {
+    const row = rows[index]
+    if (!row) return
+    setAddDialog({ open: true, index, name: row.name, price: '' })
+  }
+
+  const createMissingFlower = async () => {
+    const name = addDialog.name.trim()
+    const price = Number(addDialog.price.replace(',', '.'))
+    const row = rows[addDialog.index]
+    if (!name) {
+      toast.error('Укажите название')
+      return
+    }
+    if (!Number.isFinite(price) || price < 0) {
+      toast.error('Укажите цену продажи')
+      return
+    }
+    setSaving(true)
+    try {
+      const res = await fetch('/api/admin/flowers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name,
+          price,
+          costPrice: row?.costPrice ?? null,
+        }),
+      })
+      const flower = await res.json()
+      if (!res.ok) {
+        toast.error(flower.error || 'Не удалось добавить товар')
+        return
+      }
+      const option: FlowerOption = {
+        id: flower.id,
+        name: flower.name,
+        stock: flower.stock,
+        costPrice: flower.costPrice ?? null,
+      }
+      setFlowers((prev) =>
+        prev.some((item) => item.id === option.id) ? prev : [...prev, option].sort((a, b) => a.name.localeCompare(b.name, 'ru'))
+      )
+      const key = normalizeName(row?.name || name)
+      const sourceIndex = addDialog.index
+      setRows((prev) =>
+        prev.map((item, i) => {
+          if (i === sourceIndex) {
+            return {
+              ...item,
+              flowerId: option.id,
+              matchedName: option.name,
+              confidence: 'exact',
+              costPrice: item.costPrice ?? option.costPrice,
+            }
+          }
+          if (item.flowerId || normalizeName(item.name) !== key) return item
+          return {
+            ...item,
+            flowerId: option.id,
+            matchedName: option.name,
+            confidence: 'exact',
+            costPrice: item.costPrice ?? option.costPrice,
+          }
+        })
+      )
+      toast.success(`«${flower.name}» добавлен в каталог`)
+      setAddDialog({ open: false, index: -1, name: '', price: '' })
+    } catch {
+      toast.error('Сетевая ошибка')
+    } finally {
+      setSaving(false)
+    }
+  }
+
   const formatDate = (dateStr: string) =>
     new Date(dateStr).toLocaleString('ru-RU', {
       day: '2-digit',
@@ -214,13 +318,14 @@ export function InboundManager() {
     })
 
   return (
+    <>
     <div className="space-y-6">
       <div className="rounded-lg border p-6 space-y-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h3 className="text-lg font-semibold">Приход по накладной</h3>
             <p className="text-sm text-muted-foreground mt-1">
-              Загрузите CSV или Excel: колонки «Название» и «Количество». Строки сопоставятся с каталогом, остатки увеличатся после подтверждения.
+              Загрузите CSV или Excel: колонки «Название» и «Количество». Если цветка нет в каталоге — добавьте его или привяжите к существующему.
             </p>
           </div>
           <Button variant="outline" asChild className="cursor-pointer">
@@ -324,8 +429,13 @@ export function InboundManager() {
             <p className="text-sm">
               К оприходованию: <strong>{readyRows.length}</strong>
               {unmatched > 0 ? (
-                <span className="text-rose-600"> · не сопоставлено: {unmatched}</span>
-              ) : null}
+                <span className="text-rose-600">
+                  {' '}
+                  · осталось {unmatched}: добавьте в каталог или привяжите к существующему
+                </span>
+              ) : (
+                <span className="text-emerald-700"> · все позиции готовы</span>
+              )}
             </p>
             <div className="flex gap-2">
               <Button variant="outline" className="cursor-pointer" onClick={() => { setRows([]); setFileName(null) }}>
@@ -333,7 +443,7 @@ export function InboundManager() {
               </Button>
               <Button
                 className="bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer"
-                disabled={saving || readyRows.length === 0}
+                disabled={saving || unmatched > 0 || readyRows.length === 0}
                 onClick={() => void applyInbound()}
               >
                 <PackagePlus className="w-4 h-4 mr-1" />
@@ -380,7 +490,19 @@ export function InboundManager() {
                       />
                     </TableCell>
                     <TableCell>
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                        {row.confidence !== 'exact' ? (
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            className="cursor-pointer shrink-0"
+                            onClick={() => openAddDialog(index)}
+                          >
+                            <Plus className="w-4 h-4 mr-1" />
+                            Добавить
+                          </Button>
+                        ) : null}
                         <Select
                           value={row.flowerId || 'none'}
                           onValueChange={(value) => {
@@ -401,10 +523,10 @@ export function InboundManager() {
                           }}
                         >
                           <SelectTrigger className="max-w-md">
-                            <SelectValue placeholder="Не найден" />
+                            <SelectValue placeholder="Привязать к существующему" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="none">Пропустить</SelectItem>
+                            <SelectItem value="none">Не выбран</SelectItem>
                             {flowers.map((f) => (
                               <SelectItem key={f.id} value={f.id}>
                                 {f.name}
@@ -412,12 +534,12 @@ export function InboundManager() {
                             ))}
                           </SelectContent>
                         </Select>
-                        {row.confidence === 'exact' ? (
+                        {row.confidence === 'exact' && row.flowerId ? (
                           <Badge className="bg-emerald-100 text-emerald-700">точно</Badge>
                         ) : row.confidence === 'fuzzy' ? (
                           <Badge className="bg-amber-100 text-amber-700">похоже</Badge>
                         ) : (
-                          <Badge variant="secondary">нет</Badge>
+                          <Badge variant="secondary">нет в каталоге</Badge>
                         )}
                       </div>
                     </TableCell>
@@ -428,6 +550,14 @@ export function InboundManager() {
           </div>
         </div>
       ) : null}
+
+      <LowStockSettings
+        value={stockSettings}
+        onSaved={(next) => {
+          setStockSettings(next)
+          void load()
+        }}
+      />
 
       <div className="rounded-lg border overflow-hidden">
         <div className="px-4 py-3 flex items-center justify-between border-b">
@@ -537,5 +667,61 @@ export function InboundManager() {
         </div>
       </div>
     </div>
+
+    <Dialog
+      open={addDialog.open}
+      onOpenChange={(open) => {
+        if (!open) setAddDialog({ open: false, index: -1, name: '', price: '' })
+      }}
+    >
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Добавить в каталог</DialogTitle>
+          <DialogDescription>
+            Цветка нет среди товаров. Можно создать новый или закрыть окно и привязать строку к существующему.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-3">
+          <div className="space-y-2">
+            <Label htmlFor="inbound-new-name">Название</Label>
+            <Input
+              id="inbound-new-name"
+              value={addDialog.name}
+              onChange={(e) => setAddDialog((prev) => ({ ...prev, name: e.target.value }))}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="inbound-new-price">Цена продажи (₽)</Label>
+            <Input
+              id="inbound-new-price"
+              type="number"
+              min="0"
+              step="0.01"
+              placeholder="150"
+              value={addDialog.price}
+              onChange={(e) => setAddDialog((prev) => ({ ...prev, price: e.target.value }))}
+            />
+          </div>
+        </div>
+        <DialogFooter className="gap-2">
+          <Button
+            variant="outline"
+            className="cursor-pointer"
+            onClick={() => setAddDialog({ open: false, index: -1, name: '', price: '' })}
+          >
+            Отмена
+          </Button>
+          <Button
+            className="cursor-pointer"
+            disabled={saving}
+            onClick={() => void createMissingFlower()}
+          >
+            <Plus className="w-4 h-4 mr-1" />
+            {saving ? 'Сохранение…' : 'Создать товар'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+    </>
   )
 }

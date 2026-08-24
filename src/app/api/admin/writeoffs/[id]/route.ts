@@ -17,11 +17,12 @@ export async function DELETE(
       return NextResponse.json({ error: 'Write-off not found' }, { status: 404 })
     }
 
-    // Restore stock
-    await db.flower.update({
-      where: { id: writeoff.flowerId },
-      data: { stock: { increment: writeoff.quantity } },
-    })
+    if (writeoff.flowerId) {
+      await db.flower.update({
+        where: { id: writeoff.flowerId },
+        data: { stock: { increment: writeoff.quantity } },
+      })
+    }
 
     await db.writeOff.delete({ where: { id } })
 

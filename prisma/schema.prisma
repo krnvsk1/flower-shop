@@ -34,6 +34,8 @@ model Order {
   address       String?
   deliverySlot  String?
   comment       String?
+  source        String   @default("online") // online | walkin
+  paymentMethod String?  // terminal | qr | cash
   status        String   @default("new") // new | processing | completed | cancelled
   totalAmount   Float
   createdAt     DateTime @default(now())
@@ -46,32 +48,37 @@ model Order {
 model OrderItem {
   id          String   @id @default(cuid())
   orderId     String
-  flowerId    String
+  flowerId    String?
   flowerName  String   // имя на момент заказа (денормализация)
   quantity    Int      // количество
   price       Float    // цена за штуку на момент заказа
   subtotal    Float    // сумма строки = quantity * price
 
   order       Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  flower      Flower   @relation(fields: [flowerId], references: [id])
+  flower      Flower?  @relation(fields: [flowerId], references: [id], onDelete: SetNull)
 }
 
 // ── Списания (админ учитывает испорченные/unsold цветы) ──
 model WriteOff {
   id          String   @id @default(cuid())
-  flowerId    String
+  flowerId    String?
   flowerName  String   // имя на момент списания
   quantity    Int      // сколько списано
   reason      String?  // причина: "увяли", "повреждены", "просрочка"
   createdAt   DateTime @default(now())
 
-  flower      Flower   @relation(fields: [flowerId], references: [id])
+  flower      Flower?  @relation(fields: [flowerId], references: [id], onDelete: SetNull)
 }
 
 model Category {
   id        String   @id @default(cuid())
   name      String   @unique
   createdAt DateTime @default(now())
+}
+
+model ShopSetting {
+  key   String @id
+  value String
 }
 
 // ── Приход на склад (накладная / ручной ввод) ──
@@ -87,11 +94,11 @@ model StockInbound {
 model StockInboundItem {
   id         String   @id @default(cuid())
   inboundId  String
-  flowerId   String
+  flowerId   String?
   flowerName String
   quantity   Int
   costPrice  Float?  // закупочная цена на момент прихода
 
   inbound    StockInbound @relation(fields: [inboundId], references: [id], onDelete: Cascade)
-  flower     Flower       @relation(fields: [flowerId], references: [id])
+  flower     Flower?      @relation(fields: [flowerId], references: [id], onDelete: SetNull)
 }

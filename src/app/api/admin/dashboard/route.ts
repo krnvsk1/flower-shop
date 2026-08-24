@@ -1,5 +1,6 @@
 import { db } from '@/lib/db'
 import { requireAdmin } from '@/lib/admin-auth'
+import { getStockSettings } from '@/lib/stock-settings-store'
 import { NextResponse } from 'next/server'
 
 export async function GET() {
@@ -7,6 +8,7 @@ export async function GET() {
   if (unauthorized) return unauthorized
 
   try {
+    const settings = await getStockSettings()
     const [
       totalFlowers,
       activeFlowers,
@@ -27,7 +29,7 @@ export async function GET() {
         where: { status: { in: ['new', 'processing', 'completed'] } },
         _sum: { totalAmount: true },
       }),
-      db.flower.count({ where: { stock: { lte: 5 }, active: true } }),
+      db.flower.count({ where: { stock: { lte: settings.threshold }, active: true } }),
       db.order.findMany({
         where: { status: { in: ['new', 'processing'] } },
         orderBy: { createdAt: 'desc' },
@@ -35,7 +37,7 @@ export async function GET() {
         include: { items: true },
       }),
       db.flower.findMany({
-        where: { stock: { lte: 5 }, active: true },
+        where: { stock: { lte: settings.threshold }, active: true },
         orderBy: { stock: 'asc' },
         take: 8,
         select: { id: true, name: true, stock: true, category: true },
@@ -52,6 +54,7 @@ export async function GET() {
       lowStockCount,
       recentOrders,
       lowStockItems,
+      stockSettings: settings,
     })
   } catch (error) {
     console.error('Dashboard error:', error)
