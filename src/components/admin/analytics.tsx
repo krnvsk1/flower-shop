@@ -2,10 +2,6 @@ import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Table } from '@/components/ui/table';
 
-import React, { useEffect, useState } from 'react';\nimport { Button } from '@/components/ui/button';\nimport { Table } from '@/components/ui/table';\n\nimport { useEffect, useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Table } from '@/components/ui/table';
-
 export function Analytics() {
   const [salesData, setSalesData] = useState([]);
   const [loading, setLoading] = useState(true);

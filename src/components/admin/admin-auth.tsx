@@ -14,11 +14,22 @@ export function AdminAuth({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
-    fetch('/api/admin/session')
+    const controller = new AbortController()
+    const timer = window.setTimeout(() => controller.abort(), 8000)
+
+    fetch('/api/admin/session', { signal: controller.signal, credentials: 'include' })
       .then((res) => res.json())
       .then((data) => setIsAuthenticated(Boolean(data.authenticated)))
       .catch(() => setIsAuthenticated(false))
-      .finally(() => setChecking(false))
+      .finally(() => {
+        window.clearTimeout(timer)
+        setChecking(false)
+      })
+
+    return () => {
+      window.clearTimeout(timer)
+      controller.abort()
+    }
   }, [])
 
   const handleLogin = async () => {

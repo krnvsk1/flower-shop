@@ -20,8 +20,9 @@ model Flower {
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
 
-  orderItems  OrderItem[]
-  writeOffs   WriteOff[]
+  orderItems    OrderItem[]
+  writeOffs     WriteOff[]
+  inboundItems  StockInboundItem[]
 }
 
 // ── Заказы клиентов ──
@@ -70,4 +71,25 @@ model Category {
   id        String   @id @default(cuid())
   name      String   @unique
   createdAt DateTime @default(now())
+}
+
+// ── Приход на склад (накладная / ручной ввод) ──
+model StockInbound {
+  id        String   @id @default(cuid())
+  fileName  String?
+  note      String?
+  createdAt DateTime @default(now())
+
+  items     StockInboundItem[]
+}
+
+model StockInboundItem {
+  id         String   @id @default(cuid())
+  inboundId  String
+  flowerId   String
+  flowerName String
+  quantity   Int
+
+  inbound    StockInbound @relation(fields: [inboundId], references: [id], onDelete: Cascade)
+  flower     Flower       @relation(fields: [flowerId], references: [id])
 }

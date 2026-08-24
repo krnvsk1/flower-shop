@@ -48,7 +48,7 @@ type DashboardStats = {
 }
 
 export type DashboardNav = {
-  tab: 'dashboard' | 'flowers' | 'orders' | 'writeoffs'
+  tab: 'dashboard' | 'flowers' | 'orders' | 'inbound' | 'writeoffs'
   orderStatus?: string
   lowStock?: boolean
 }
@@ -84,7 +84,7 @@ const statCards: {
     icon: AlertTriangle,
     color: 'bg-rose-100 text-rose-600',
     border: 'border-rose-200',
-    nav: { tab: 'flowers', lowStock: true },
+    nav: { tab: 'inbound' },
   },
   {
     key: 'totalRevenue',
@@ -287,9 +287,9 @@ export function Dashboard({ onNavigate }: { onNavigate: (nav: DashboardNav) => v
               variant="ghost"
               size="sm"
               className="cursor-pointer"
-              onClick={() => onNavigate({ tab: 'flowers', lowStock: true })}
+              onClick={() => onNavigate({ tab: 'inbound' })}
             >
-              Все такие
+              К закупке
             </Button>
           </CardHeader>
           <CardContent>

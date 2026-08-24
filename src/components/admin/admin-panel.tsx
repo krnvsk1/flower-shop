@@ -7,20 +7,22 @@ import { Dashboard } from './dashboard'
 import { FlowerManager } from './flower-manager'
 import { OrderManager } from './order-manager'
 import { WriteOffManager } from './writeoff-manager'
+import { InboundManager } from './inbound-manager'
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
-import { Flower2, LayoutDashboard, ShoppingCart, PackageX, PanelLeftClose, PanelLeftOpen, LogOut } from 'lucide-react'
+import { Flower2, LayoutDashboard, ShoppingCart, PackageX, PackagePlus, PanelLeftClose, PanelLeftOpen, LogOut } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
-export type TabKey = 'dashboard' | 'flowers' | 'orders' | 'writeoffs'
+export type TabKey = 'dashboard' | 'flowers' | 'orders' | 'inbound' | 'writeoffs'
 
 const NAV_ITEMS: { key: TabKey; label: string; description: string; icon: typeof LayoutDashboard }[] = [
   { key: 'dashboard', label: 'Панель управления', description: 'Общая статистика магазина', icon: LayoutDashboard },
   { key: 'flowers', label: 'Товары', description: 'Управление ассортиментом цветов', icon: Flower2 },
   { key: 'orders', label: 'Заказы', description: 'Обработка и отслеживание заказов', icon: ShoppingCart },
+  { key: 'inbound', label: 'Приход', description: 'Накладные и список закупки', icon: PackagePlus },
   { key: 'writeoffs', label: 'Списания', description: 'Учёт испорченных товаров', icon: PackageX },
 ]
 
@@ -179,6 +181,7 @@ function AdminContent() {
               activeTab === 'dashboard' && 'bg-rose-100',
               activeTab === 'flowers' && 'bg-emerald-100',
               activeTab === 'orders' && 'bg-amber-100',
+              activeTab === 'inbound' && 'bg-emerald-100',
               activeTab === 'writeoffs' && 'bg-rose-100',
             )}>
               <currentNav.icon className={cn(
@@ -186,6 +189,7 @@ function AdminContent() {
                 activeTab === 'dashboard' && 'text-rose-600',
                 activeTab === 'flowers' && 'text-emerald-600',
                 activeTab === 'orders' && 'text-amber-600',
+                activeTab === 'inbound' && 'text-emerald-600',
                 activeTab === 'writeoffs' && 'text-rose-600',
               )} />
             </div>
@@ -200,6 +204,7 @@ function AdminContent() {
           {activeTab === 'dashboard' && <Dashboard onNavigate={onDashboardNavigate} />}
           {activeTab === 'flowers' && <FlowerManager lowStockOnly={lowStockOnly} />}
           {activeTab === 'orders' && <OrderManager initialStatus={orderFilter} />}
+          {activeTab === 'inbound' && <InboundManager />}
           {activeTab === 'writeoffs' && <WriteOffManager />}
         </main>
 

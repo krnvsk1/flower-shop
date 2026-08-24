@@ -1,0 +1,468 @@
+'use client'
+
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { toast } from 'sonner'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Skeleton } from '@/components/ui/skeleton'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { Separator } from '@/components/ui/separator'
+import { Badge } from '@/components/ui/badge'
+import { Download, FileUp, PackagePlus } from 'lucide-react'
+
+type FlowerOption = { id: string; name: string; stock: number }
+
+type PreviewRow = {
+  line: number
+  name: string
+  quantity: number
+  flowerId: string | null
+  matchedName: string | null
+  confidence: 'exact' | 'fuzzy' | 'none'
+}
+
+type InboundRecord = {
+  id: string
+  fileName: string | null
+  note: string | null
+  createdAt: string
+  items: { id: string; flowerName: string; quantity: number }[]
+}
+
+type PurchaseItem = {
+  id: string
+  name: string
+  category: string | null
+  stock: number
+  suggestedQty: number
+}
+
+export function InboundManager() {
+  const [flowers, setFlowers] = useState<FlowerOption[]>([])
+  const [history, setHistory] = useState<InboundRecord[]>([])
+  const [purchase, setPurchase] = useState<PurchaseItem[]>([])
+  const [loading, setLoading] = useState(true)
+  const [parsing, setParsing] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [fileName, setFileName] = useState<string | null>(null)
+  const [rows, setRows] = useState<PreviewRow[]>([])
+  const [manualFlower, setManualFlower] = useState('')
+  const [manualQty, setManualQty] = useState('')
+
+  const load = useCallback(async () => {
+    try {
+      const [flowersRes, historyRes, purchaseRes] = await Promise.all([
+        fetch('/api/admin/flowers'),
+        fetch('/api/admin/inbound'),
+        fetch('/api/admin/inbound/purchase-list'),
+      ])
+      if (flowersRes.ok) {
+        const all = await flowersRes.json()
+        setFlowers(all.map((f: FlowerOption) => ({ id: f.id, name: f.name, stock: f.stock })))
+      }
+      if (historyRes.ok) setHistory(await historyRes.json())
+      if (purchaseRes.ok) {
+        const data = await purchaseRes.json()
+        setPurchase(data.items || [])
+      }
+    } catch {
+      toast.error('Ошибка загрузки прихода')
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    void load()
+  }, [load])
+
+  const readyRows = useMemo(
+    () => rows.filter((row) => row.flowerId && row.quantity > 0),
+    [rows]
+  )
+  const unmatched = rows.length - readyRows.length
+
+  const onFile = async (file: File | undefined) => {
+    if (!file) return
+    setParsing(true)
+    try {
+      const form = new FormData()
+      form.append('file', file)
+      const res = await fetch('/api/admin/inbound/preview', { method: 'POST', body: form })
+      const data = await res.json()
+      if (!res.ok) {
+        toast.error(data.error || 'Не удалось разобрать файл')
+        return
+      }
+      setFileName(data.fileName)
+      setRows(data.rows)
+      if (data.flowers) {
+        setFlowers(data.flowers)
+      }
+      toast.success(`Найдено строк: ${data.rows.length}`)
+    } catch {
+      toast.error('Сетевая ошибка')
+    } finally {
+      setParsing(false)
+    }
+  }
+
+  const applyManual = async () => {
+    const flower = flowers.find((f) => f.id === manualFlower)
+    const quantity = parseInt(manualQty, 10)
+    if (!flower || !Number.isFinite(quantity) || quantity <= 0) {
+      toast.error('Выберите цветок и количество')
+      return
+    }
+    setSaving(true)
+    try {
+      const res = await fetch('/api/admin/inbound', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fileName: 'ручной ввод',
+          items: [{ flowerId: flower.id, quantity }],
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        toast.error(data.error || 'Не удалось оприходовать')
+        return
+      }
+      toast.success(`${flower.name}: +${quantity} шт.`)
+      setManualFlower('')
+      setManualQty('')
+      await load()
+    } catch {
+      toast.error('Сетевая ошибка')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const applyInbound = async () => {
+    if (readyRows.length === 0) {
+      toast.error('Сопоставьте хотя бы одну строку с товаром')
+      return
+    }
+    setSaving(true)
+    try {
+      const res = await fetch('/api/admin/inbound', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fileName,
+          items: readyRows.map((row) => ({ flowerId: row.flowerId, quantity: row.quantity })),
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        toast.error(data.error || 'Не удалось оприходовать')
+        return
+      }
+      toast.success('Остатки пополнены')
+      setRows([])
+      setFileName(null)
+      await load()
+    } catch {
+      toast.error('Сетевая ошибка')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const formatDate = (dateStr: string) =>
+    new Date(dateStr).toLocaleString('ru-RU', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    })
+
+  return (
+    <div className="space-y-6">
+      <div className="rounded-lg border p-6 space-y-4">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h3 className="text-lg font-semibold">Приход по накладной</h3>
+            <p className="text-sm text-muted-foreground mt-1">
+              Загрузите CSV или Excel: колонки «Название» и «Количество». Строки сопоставятся с каталогом, остатки увеличатся после подтверждения.
+            </p>
+          </div>
+          <Button variant="outline" asChild className="cursor-pointer">
+            <a href="/api/admin/inbound/template">
+              <Download className="w-4 h-4 mr-1" />
+              Шаблон CSV
+            </a>
+          </Button>
+        </div>
+        <Separator />
+        <div className="flex flex-wrap items-center gap-3">
+          <Label
+            htmlFor="inbound-file"
+            className="inline-flex items-center gap-2 rounded-md border px-3 py-2 text-sm cursor-pointer hover:bg-muted"
+          >
+            <FileUp className="w-4 h-4" />
+            {parsing ? 'Разбор файла…' : 'Загрузить документ'}
+          </Label>
+          <Input
+            id="inbound-file"
+            type="file"
+            accept=".csv,.txt,.xlsx,.xls,.ods"
+            className="hidden"
+            disabled={parsing}
+            onChange={(e) => void onFile(e.target.files?.[0])}
+          />
+          {fileName ? (
+            <span className="text-sm text-muted-foreground">{fileName}</span>
+          ) : null}
+        </div>
+
+      </div>
+
+      <div className="rounded-lg border p-6 space-y-4">
+        <h3 className="text-lg font-semibold">Добавить вручную</h3>
+        <p className="text-sm text-muted-foreground">
+          Без файла: выберите цветок и сколько пришло — остаток увеличится сразу.
+        </p>
+        <Separator />
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="space-y-2 sm:col-span-2">
+            <Label>Цветок</Label>
+            <Select value={manualFlower || undefined} onValueChange={setManualFlower}>
+              <SelectTrigger>
+                <SelectValue placeholder="Выберите цветок" />
+              </SelectTrigger>
+              <SelectContent>
+                {flowers.map((f) => (
+                  <SelectItem key={f.id} value={f.id}>
+                    {f.name} (ост: {f.stock})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="inbound-qty">Количество</Label>
+            <Input
+              id="inbound-qty"
+              type="number"
+              min="1"
+              value={manualQty}
+              onChange={(e) => setManualQty(e.target.value)}
+            />
+          </div>
+          <div className="flex items-end">
+            <Button
+              className="bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer w-full"
+              disabled={saving || !manualFlower || !manualQty}
+              onClick={() => void applyManual()}
+            >
+              <PackagePlus className="w-4 h-4 mr-1" />
+              {saving ? 'Сохранение…' : 'Оприходовать'}
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      {rows.length > 0 ? (
+        <div className="rounded-lg border overflow-hidden">
+          <div className="px-4 py-3 flex flex-wrap items-center justify-between gap-2 border-b">
+            <p className="text-sm">
+              К оприходованию: <strong>{readyRows.length}</strong>
+              {unmatched > 0 ? (
+                <span className="text-rose-600"> · не сопоставлено: {unmatched}</span>
+              ) : null}
+            </p>
+            <div className="flex gap-2">
+              <Button variant="outline" className="cursor-pointer" onClick={() => { setRows([]); setFileName(null) }}>
+                Сбросить
+              </Button>
+              <Button
+                className="bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer"
+                disabled={saving || readyRows.length === 0}
+                onClick={() => void applyInbound()}
+              >
+                <PackagePlus className="w-4 h-4 mr-1" />
+                {saving ? 'Сохранение…' : 'Оприходовать'}
+              </Button>
+            </div>
+          </div>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-muted/50">
+                  <TableHead>Из документа</TableHead>
+                  <TableHead className="w-[100px] text-right">Кол-во</TableHead>
+                  <TableHead>Товар в каталоге</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {rows.map((row, index) => (
+                  <TableRow key={`${row.line}-${index}`}>
+                    <TableCell className="font-medium">{row.name}</TableCell>
+                    <TableCell className="text-right font-mono">{row.quantity}</TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <Select
+                          value={row.flowerId || 'none'}
+                          onValueChange={(value) => {
+                            const flower = flowers.find((f) => f.id === value)
+                            setRows((prev) =>
+                              prev.map((item, i) =>
+                                i === index
+                                  ? {
+                                      ...item,
+                                      flowerId: value === 'none' ? null : value,
+                                      matchedName: flower?.name ?? null,
+                                      confidence: value === 'none' ? 'none' : 'exact',
+                                    }
+                                  : item
+                              )
+                            )
+                          }}
+                        >
+                          <SelectTrigger className="max-w-md">
+                            <SelectValue placeholder="Не найден" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">Пропустить</SelectItem>
+                            {flowers.map((f) => (
+                              <SelectItem key={f.id} value={f.id}>
+                                {f.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        {row.confidence === 'exact' ? (
+                          <Badge className="bg-emerald-100 text-emerald-700">точно</Badge>
+                        ) : row.confidence === 'fuzzy' ? (
+                          <Badge className="bg-amber-100 text-amber-700">похоже</Badge>
+                        ) : (
+                          <Badge variant="secondary">нет</Badge>
+                        )}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </div>
+      ) : null}
+
+      <div className="rounded-lg border overflow-hidden">
+        <div className="px-4 py-3 flex items-center justify-between border-b">
+          <h3 className="font-semibold">Список закупки</h3>
+          <Button variant="outline" size="sm" asChild className="cursor-pointer">
+            <a href="/api/admin/inbound/purchase-list?format=csv">
+              <Download className="w-4 h-4 mr-1" />
+              Скачать CSV
+            </a>
+          </Button>
+        </div>
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-muted/50">
+                <TableHead>Товар</TableHead>
+                <TableHead className="text-right">Остаток</TableHead>
+                <TableHead className="text-right">Заказать</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {loading ? (
+                Array.from({ length: 3 }).map((_, i) => (
+                  <TableRow key={i}>
+                    <TableCell><Skeleton className="h-4 w-40" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-10 ml-auto" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-10 ml-auto" /></TableCell>
+                  </TableRow>
+                ))
+              ) : purchase.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={3} className="text-center py-8 text-muted-foreground">
+                    Низкого остатка нет
+                  </TableCell>
+                </TableRow>
+              ) : (
+                purchase.map((item) => (
+                  <TableRow key={item.id}>
+                    <TableCell>
+                      {item.name}
+                      {item.category ? (
+                        <span className="text-muted-foreground"> · {item.category}</span>
+                      ) : null}
+                    </TableCell>
+                    <TableCell className="text-right font-mono text-rose-600">{item.stock}</TableCell>
+                    <TableCell className="text-right font-mono font-medium">{item.suggestedQty}</TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </div>
+      </div>
+
+      <div className="rounded-lg border overflow-hidden">
+        <div className="px-4 py-3 border-b">
+          <h3 className="font-semibold">История приходов</h3>
+        </div>
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-muted/50">
+                <TableHead>Документ</TableHead>
+                <TableHead>Позиции</TableHead>
+                <TableHead>Дата</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {loading ? (
+                Array.from({ length: 3 }).map((_, i) => (
+                  <TableRow key={i}>
+                    <TableCell><Skeleton className="h-4 w-32" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-48" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-28" /></TableCell>
+                  </TableRow>
+                ))
+              ) : history.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={3} className="text-center py-8 text-muted-foreground">
+                    Приходов пока нет
+                  </TableCell>
+                </TableRow>
+              ) : (
+                history.map((item) => (
+                  <TableRow key={item.id}>
+                    <TableCell className="font-medium">{item.fileName || 'вручную'}</TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {item.items.map((line) => `${line.flowerName} +${line.quantity}`).join(', ')}
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground">{formatDate(item.createdAt)}</TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </div>
+      </div>
+    </div>
+  )
+}
