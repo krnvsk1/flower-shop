@@ -320,7 +320,7 @@ export function InboundManager() {
   return (
     <>
     <div className="space-y-6">
-      <div className="rounded-lg border p-6 space-y-4">
+      <div className="admin-surface p-6 space-y-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h3 className="text-lg font-semibold">Приход по накладной</h3>
@@ -359,7 +359,7 @@ export function InboundManager() {
 
       </div>
 
-      <div className="rounded-lg border p-6 space-y-4">
+      <div className="admin-surface p-6 space-y-4">
         <h3 className="text-lg font-semibold">Добавить вручную</h3>
         <p className="text-sm text-muted-foreground">
           Без файла: выберите цветок и сколько пришло — остаток увеличится сразу.
@@ -424,7 +424,7 @@ export function InboundManager() {
       </div>
 
       {rows.length > 0 ? (
-        <div className="rounded-lg border overflow-hidden">
+        <div className="admin-surface overflow-hidden">
           <div className="px-4 py-3 flex flex-wrap items-center justify-between gap-2 border-b">
             <p className="text-sm">
               К оприходованию: <strong>{readyRows.length}</strong>
@@ -559,7 +559,7 @@ export function InboundManager() {
         }}
       />
 
-      <div className="rounded-lg border overflow-hidden">
+      <div className="admin-surface overflow-hidden">
         <div className="px-4 py-3 flex items-center justify-between border-b">
           <h3 className="font-semibold">Список закупки</h3>
           <Button variant="outline" size="sm" asChild className="cursor-pointer">
@@ -617,7 +617,7 @@ export function InboundManager() {
         </div>
       </div>
 
-      <div className="rounded-lg border overflow-hidden">
+      <div className="admin-surface overflow-hidden">
         <div className="px-4 py-3 border-b">
           <h3 className="font-semibold">История приходов</h3>
         </div>

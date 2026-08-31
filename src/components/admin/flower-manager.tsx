@@ -556,7 +556,7 @@ export function FlowerManager({ lowStockOnly = false }: { lowStockOnly?: boolean
             </Button>
           </div>
         )}
-        <div className="rounded-lg border overflow-hidden">
+        <div className="admin-surface overflow-hidden">
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
@@ -841,7 +841,7 @@ export function FlowerManager({ lowStockOnly = false }: { lowStockOnly?: boolean
               Добавить
             </Button>
           </div>
-          <div className="rounded-lg border divide-y">
+          <div className="admin-surface divide-y">
             {categories.length === 0 ? (
               <p className="p-4 text-sm text-muted-foreground">Категорий пока нет</p>
             ) : (

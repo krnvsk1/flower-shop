@@ -1,7 +1,7 @@
 export const PAYMENT_METHODS = [
-  { value: 'cash', label: 'Наличные', hint: 'Оплата купюрами и монетой' },
-  { value: 'terminal', label: 'Терминал', hint: 'Карта на кассе' },
-  { value: 'qr', label: 'QR-код', hint: 'СБП или перевод по QR' },
+  { value: 'cash', label: 'Наличные', hint: 'Оплата купюрами и монетой', deliveryHint: 'Курьеру при получении' },
+  { value: 'terminal', label: 'Терминал', hint: 'Карта на кассе', deliveryHint: 'Картой курьеру' },
+  { value: 'qr', label: 'QR-код', hint: 'СБП или перевод по QR', deliveryHint: 'СБП или перевод по QR' },
 ] as const
 
 export type PaymentMethod = (typeof PAYMENT_METHODS)[number]['value']

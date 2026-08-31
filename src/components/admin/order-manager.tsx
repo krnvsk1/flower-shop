@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState, useCallback, useRef } from 'react'
+import { useEffect, useMemo, useState, useCallback } from 'react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -33,6 +33,7 @@ import { RefreshCw, AlertTriangle, PackageCheck, PackageX, ChevronDown, Phone } 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { PosSale } from '@/components/admin/pos-sale'
 import { paymentLabel } from '@/lib/payment'
+import { ORDERS_CHANGED_EVENT, notifyOrdersChanged } from '@/lib/order-chime'
 
 type OrderItem = {
   id: string
@@ -53,6 +54,8 @@ type Order = {
   paymentMethod?: string | null
   status: string
   totalAmount: number
+  bonusSpent?: number
+  bonusEarned?: number
   createdAt: string
   updatedAt: string
   items: OrderItem[]
@@ -85,8 +88,6 @@ export function OrderManager({ initialStatus = 'all' }: { initialStatus?: string
     order: Order | null
     previousStatus: string
   }>({ open: false, order: null, previousStatus: '' })
-  const knownIds = useRef<Set<string>>(new Set())
-  const firstLoad = useRef(true)
 
   useEffect(() => {
     setFilterStatus(initialStatus)
@@ -97,18 +98,6 @@ export function OrderManager({ initialStatus = 'all' }: { initialStatus?: string
       const res = await fetch('/api/admin/orders')
       if (!res.ok) return
       const data: Order[] = await res.json()
-      if (!firstLoad.current) {
-        const fresh = data.filter((o) => o.status === 'new' && !knownIds.current.has(o.id))
-        if (fresh.length > 0) {
-          toast.success(
-            fresh.length === 1
-              ? `Новый заказ от ${fresh[0].clientName}`
-              : `Новых заказов: ${fresh.length}`
-          )
-        }
-      }
-      knownIds.current = new Set(data.map((o) => o.id))
-      firstLoad.current = false
       setOrders(data)
     } catch {
       if (!silent) toast.error('Ошибка загрузки заказов')
@@ -119,8 +108,13 @@ export function OrderManager({ initialStatus = 'all' }: { initialStatus?: string
 
   useEffect(() => {
     void fetchOrders()
-    const timer = setInterval(() => void fetchOrders(true), 20000)
-    return () => clearInterval(timer)
+    const timer = setInterval(() => void fetchOrders(true), 8000)
+    const onChanged = () => void fetchOrders(true)
+    window.addEventListener(ORDERS_CHANGED_EVENT, onChanged)
+    return () => {
+      clearInterval(timer)
+      window.removeEventListener(ORDERS_CHANGED_EVENT, onChanged)
+    }
   }, [fetchOrders])
 
   const handleStatusChange = async (order: Order, newStatus: string) => {
@@ -137,6 +131,7 @@ export function OrderManager({ initialStatus = 'all' }: { initialStatus?: string
       })
       if (res.ok) {
         toast.success(`Статус: «${STATUSES.find((s) => s.value === newStatus)?.label}»`)
+        notifyOrdersChanged()
         void fetchOrders(true)
       }
     } catch {
@@ -159,6 +154,7 @@ export function OrderManager({ initialStatus = 'all' }: { initialStatus?: string
       })
       if (res.ok) {
         toast.success(restoreStock ? 'Заказ отменён, цветы на складе.' : 'Заказ отменён, товары списаны.')
+        notifyOrdersChanged()
         void fetchOrders(true)
       }
     } catch {
@@ -240,9 +236,9 @@ export function OrderManager({ initialStatus = 'all' }: { initialStatus?: string
           Обновить
         </Button>
       </div>
-      <p className="text-xs text-muted-foreground">Список обновляется каждые 20 секунд.</p>
+      <p className="text-xs text-muted-foreground">Список обновляется каждые 8 секунд. Новый заказ с сайта сопровождается звуком, пока его не примут.</p>
 
-      <div className="rounded-lg border overflow-hidden">
+      <div className="admin-surface overflow-hidden">
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>
@@ -292,6 +288,10 @@ export function OrderManager({ initialStatus = 'all' }: { initialStatus?: string
                           <Badge variant="outline" className="mt-1 font-normal">
                             зал · {paymentLabel(order.paymentMethod)}
                           </Badge>
+                        ) : order.paymentMethod ? (
+                          <Badge variant="outline" className="mt-1 font-normal">
+                            {paymentLabel(order.paymentMethod)}
+                          </Badge>
                         ) : null}
                       </TableCell>
                       <TableCell>
@@ -311,7 +311,12 @@ export function OrderManager({ initialStatus = 'all' }: { initialStatus?: string
                         </div>
                       </TableCell>
                       <TableCell className="text-right font-mono">
-                        {order.totalAmount.toLocaleString('ru-RU')} ₽
+                        <div>{order.totalAmount.toLocaleString('ru-RU')} ₽</div>
+                        {(order.bonusSpent || 0) > 0 ? (
+                          <div className="text-xs text-muted-foreground">
+                            бонусы −{order.bonusSpent}
+                          </div>
+                        ) : null}
                       </TableCell>
                       <TableCell className="text-center">{statusBadge(order.status)}</TableCell>
                       <TableCell className="text-sm text-muted-foreground">

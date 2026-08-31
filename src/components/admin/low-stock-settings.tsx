@@ -49,7 +49,7 @@ export function LowStockSettings({ value, onSaved, compact = false }: Props) {
   const preview = computeStockSettings(settings.targetStock, settings.lowStockPercent)
 
   return (
-    <div className={compact ? 'space-y-3' : 'space-y-4 rounded-lg border p-4'}>
+    <div className={compact ? 'space-y-3' : 'space-y-4 admin-surface p-4'}>
       {!compact && (
         <div>
           <h3 className="font-semibold">Мало на складе</h3>

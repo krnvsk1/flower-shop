@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { FlowerCard, type Flower } from './flower-card';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useCartStore } from '@/store/cart-store';
 
 export function FlowerGrid() {
   const [flowers, setFlowers] = useState<Flower[]>([]);
@@ -19,7 +20,11 @@ export function FlowerGrid() {
         const res = await fetch('/api/flowers');
         if (!res.ok) throw new Error('Failed to fetch flowers');
         const data = await res.json();
-        setFlowers(Array.isArray(data) ? data : data.flowers ?? []);
+        const list = (Array.isArray(data) ? data : data.flowers ?? []).filter(
+          (flower: Flower) => flower.stock > 0
+        );
+        setFlowers(list);
+        useCartStore.getState().keepOnlyIds(list.map((flower: Flower) => flower.id));
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Unknown error');
       } finally {
@@ -76,6 +81,8 @@ export function FlowerGrid() {
             placeholder="Найти букет"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
+            autoComplete="off"
+            suppressHydrationWarning
             className="w-full sm:w-72 bg-transparent border-0 border-b border-border rounded-none h-10 px-0 text-sm placeholder:text-muted-foreground focus:outline-none focus:border-foreground"
           />
           <div className="flex flex-wrap gap-x-5 gap-y-2 sm:justify-end">

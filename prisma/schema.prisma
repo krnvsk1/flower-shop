@@ -32,12 +32,16 @@ model Order {
   clientName    String
   clientPhone   String
   address       String?
+  addressLat    Float?
+  addressLng    Float?
   deliverySlot  String?
   comment       String?
   source        String   @default("online") // online | walkin
   paymentMethod String?  // terminal | qr | cash
   status        String   @default("new") // new | processing | completed | cancelled
   totalAmount   Float
+  bonusSpent    Int      @default(0)
+  bonusEarned   Int      @default(0)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
@@ -79,6 +83,12 @@ model Category {
 model ShopSetting {
   key   String @id
   value String
+}
+
+model CustomerBonus {
+  phone     String   @id
+  balance   Int      @default(0)
+  updatedAt DateTime @updatedAt
 }
 
 // ── Приход на склад (накладная / ручной ввод) ──

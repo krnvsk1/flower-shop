@@ -136,8 +136,16 @@
   }
 }
 
+body:has(.admin-shell) :is(h1, h2, h3, .font-display, .font-mono) {
+  font-family: inherit;
+}
+
 .storefront {
   background-color: oklch(0.965 0.01 85);
+}
+
+.admin-shell {
+  background-color: oklch(0.9 0.02 80);
 }
 
 .store-hero-wash {
@@ -146,4 +154,126 @@
     radial-gradient(55% 50% at 6% 92%, oklch(0.78 0.045 145 / 0.26), transparent 52%),
     radial-gradient(40% 40% at 50% 40%, oklch(0.99 0.01 85 / 0.5), transparent 70%),
     oklch(0.955 0.012 82);
+}
+
+.admin-shell aside {
+  background: oklch(0.96 0.012 80 / 0.92);
+}
+
+.admin-shell [data-slot="card"],
+.admin-shell .admin-surface {
+  background: oklch(0.995 0.003 90);
+  border: 1px solid oklch(0.86 0.02 75);
+  box-shadow:
+    0 1px 2px oklch(0.35 0.04 50 / 0.05),
+    0 12px 28px oklch(0.35 0.04 50 / 0.07);
+  transform-origin: center center;
+  transition:
+    transform 0.22s ease,
+    box-shadow 0.22s ease,
+    border-color 0.22s ease;
+}
+
+.admin-shell [data-slot="card"]:hover,
+.admin-shell .admin-surface:hover {
+  z-index: 3;
+  position: relative;
+  transform: translateY(-4px) scale(1.02);
+  border-color: oklch(0.55 0.09 25 / 0.45);
+  box-shadow:
+    0 10px 18px oklch(0.35 0.04 50 / 0.08),
+    0 24px 44px oklch(0.35 0.04 50 / 0.14);
+}
+
+.admin-shell [data-slot="card"]:focus-within,
+.admin-shell .admin-surface:focus-within {
+  z-index: 3;
+  position: relative;
+  transform: none;
+  border-color: oklch(0.55 0.09 25 / 0.4);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .admin-shell [data-slot="card"]:hover,
+  .admin-shell .admin-surface:hover {
+    transform: none;
+  }
+}
+
+.admin-shell [data-slot="card"] {
+  border-radius: 0;
+}
+
+.admin-shell .rounded-lg,
+.admin-shell .rounded-xl,
+.admin-shell .rounded-md {
+  border-radius: 0;
+}
+
+.admin-shell [data-slot="table-header"] {
+  background: oklch(0.97 0.01 82);
+}
+
+.admin-shell [data-slot="table-body"] [data-slot="table-row"]:nth-child(even) {
+  background: oklch(0.975 0.008 82);
+}
+
+.admin-shell [data-slot="input"],
+.admin-shell textarea {
+  background: oklch(0.985 0.006 85);
+}
+
+.admin-shell .admin-surface.no-lift:hover,
+.admin-shell .admin-surface.no-lift:focus-within {
+  transform: none;
+  z-index: auto;
+  box-shadow:
+    0 1px 2px oklch(0.35 0.04 50 / 0.05),
+    0 12px 28px oklch(0.35 0.04 50 / 0.07);
+  border-color: oklch(0.86 0.02 75);
+}
+
+.admin-shell .admin-order-alert,
+.admin-shell .admin-order-alert:hover,
+.admin-shell .admin-order-alert:focus-within {
+  position: fixed;
+  z-index: 80;
+  transform: none;
+}
+
+.leaflet-container {
+  z-index: 0;
+  height: 100%;
+  width: 100%;
+  font: inherit;
+}
+
+.shop-map-pin {
+  background: none;
+  border: none;
+}
+
+.shop-map-pin-dot {
+  display: block;
+  width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  border: 2px solid white;
+  box-shadow: 0 1px 4px rgb(0 0 0 / 0.35);
+}
+
+.shop-map-pin-dot--addr {
+  background: #9a4a3c;
+}
+
+.shop-map-pin-dot--me {
+  background: #1d4ed8;
+}
+
+body:has(.admin-shell) [data-slot="dialog-content"] {
+  background: oklch(0.995 0.003 90);
+  border-radius: 0;
+  box-shadow:
+    0 1px 2px oklch(0.35 0.04 50 / 0.05),
+    0 18px 40px oklch(0.35 0.04 50 / 0.12);
 }

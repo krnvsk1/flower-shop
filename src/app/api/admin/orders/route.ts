@@ -1,6 +1,9 @@
 import { db } from '@/lib/db'
 import { requireAdmin } from '@/lib/admin-auth'
 import { isPaymentMethod } from '@/lib/payment'
+import { saleUnitPrice } from '@/lib/promo'
+import { getPromos } from '@/lib/promo-store'
+import { applyBonuses, getBonusSettings } from '@/lib/bonus-store'
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function GET() {
@@ -50,6 +53,8 @@ export async function POST(req: NextRequest) {
     const comment =
       typeof body.comment === 'string' && body.comment.trim() ? body.comment.trim() : null
 
+    const promos = await getPromos()
+    const bonusSettings = await getBonusSettings()
     const order = await db.$transaction(async (tx) => {
       const validated: { flowerId: string; quantity: number; name: string; price: number }[] = []
 
@@ -69,11 +74,19 @@ export async function POST(req: NextRequest) {
           flowerId: flower.id,
           quantity,
           name: flower.name,
-          price: flower.price,
+          price: saleUnitPrice(flower.price, promos, flower.id),
         })
       }
 
-      const totalAmount = validated.reduce((sum, item) => sum + item.price * item.quantity, 0)
+      const goodsTotal = validated.reduce((sum, item) => sum + item.price * item.quantity, 0)
+      const spendRequested =
+        body.spendBonuses === true ? goodsTotal : Math.max(0, Math.floor(Number(body.bonusSpend) || 0))
+      const bonus = await applyBonuses(tx, {
+        phone: clientPhone,
+        goodsTotal,
+        spendRequested,
+        settings: bonusSettings,
+      })
 
       const created = await tx.order.create({
         data: {
@@ -85,7 +98,9 @@ export async function POST(req: NextRequest) {
           source: 'walkin',
           paymentMethod,
           status: 'completed',
-          totalAmount,
+          totalAmount: bonus.totalAmount,
+          bonusSpent: bonus.spent,
+          bonusEarned: bonus.earned,
           items: {
             create: validated.map((item) => ({
               flowerId: item.flowerId,

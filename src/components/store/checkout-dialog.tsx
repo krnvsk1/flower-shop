@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Loader2, CreditCard } from 'lucide-react';
 import {
   Dialog,
@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Select,
   SelectContent,
@@ -25,6 +26,11 @@ import { Separator } from '@/components/ui/separator';
 import { useCartStore } from '@/store/cart-store';
 import { toast } from 'sonner';
 import { z } from 'zod';
+import { earnBonuses, maxSpend, normalizePhone } from '@/lib/bonus';
+import { PAYMENT_METHODS, type PaymentMethod } from '@/lib/payment';
+import { cn } from '@/lib/utils';
+import { AddressPicker } from '@/components/store/address-picker';
+import type { LatLng } from '@/lib/geo';
 
 const DELIVERY_SLOTS = [
   'Как можно скорее',
@@ -47,6 +53,7 @@ const orderSchema = z.object({
     ),
   address: z.string().min(5, 'Укажите адрес доставки'),
   deliverySlot: z.string().min(1, 'Выберите время доставки'),
+  paymentMethod: z.enum(['cash', 'terminal', 'qr'], { message: 'Выберите способ оплаты' }),
   comment: z.string().optional(),
 });
 
@@ -61,39 +68,104 @@ export function CheckoutDialog({ open, onOpenChange }: CheckoutDialogProps) {
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [address, setAddress] = useState('');
+  const [addressPoint, setAddressPoint] = useState<LatLng | null>(null);
   const [deliverySlot, setDeliverySlot] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | ''>('');
   const [comment, setComment] = useState('');
   const [errors, setErrors] = useState<Partial<Record<keyof OrderForm, string>>>({});
   const [submitting, setSubmitting] = useState(false);
+  const [bonusEnabled, setBonusEnabled] = useState(false);
+  const [bonusPercent, setBonusPercent] = useState(0);
+  const [bonusBalance, setBonusBalance] = useState(0);
+  const [spendBonuses, setSpendBonuses] = useState(false);
 
   const items = useCartStore((s) => s.items);
   const total = useCartStore((s) => s.total);
   const clearCart = useCartStore((s) => s.clearCart);
 
   const currentTotal = total();
+  const spendAmount = spendBonuses ? maxSpend(currentTotal, bonusBalance) : 0;
+  const payable = currentTotal - spendAmount;
+  const willEarn = bonusEnabled ? earnBonuses(payable, bonusPercent) : 0;
+
+  useEffect(() => {
+    if (!open) return;
+    const load = async () => {
+      try {
+        const res = await fetch('/api/bonus');
+        if (!res.ok) return;
+        const data = await res.json();
+        setBonusEnabled(Boolean(data.enabled));
+        setBonusPercent(Number(data.percent) || 0);
+      } catch {
+        setBonusEnabled(false);
+      }
+    };
+    void load();
+  }, [open]);
+
+  useEffect(() => {
+    if (!open || !bonusEnabled) {
+      setBonusBalance(0);
+      return;
+    }
+    const key = normalizePhone(phone);
+    if (!key) {
+      setBonusBalance(0);
+      return;
+    }
+    const timer = window.setTimeout(() => {
+      void (async () => {
+        try {
+          const res = await fetch(`/api/bonus?phone=${encodeURIComponent(phone)}`);
+          if (!res.ok) return;
+          const data = await res.json();
+          setBonusBalance(Number(data.balance) || 0);
+        } catch {
+          setBonusBalance(0);
+        }
+      })();
+    }, 400);
+    return () => window.clearTimeout(timer);
+  }, [open, bonusEnabled, phone]);
 
   const validate = (): boolean => {
-    const result = orderSchema.safeParse({ name, phone, address, deliverySlot, comment });
-    if (result.success) {
-      setErrors({});
-      return true;
+    const result = orderSchema.safeParse({
+      name,
+      phone,
+      address,
+      deliverySlot,
+      paymentMethod,
+      comment,
+    });
+    if (!result.success) {
+      const fieldErrors: Partial<Record<keyof OrderForm, string>> = {};
+      for (const issue of result.error.issues) {
+        const key = issue.path[0] as keyof OrderForm;
+        if (!fieldErrors[key]) fieldErrors[key] = issue.message;
+      }
+      setErrors(fieldErrors);
+      return false;
     }
-    const fieldErrors: Partial<Record<keyof OrderForm, string>> = {};
-    for (const issue of result.error.issues) {
-      const key = issue.path[0] as keyof OrderForm;
-      if (!fieldErrors[key]) fieldErrors[key] = issue.message;
+    if (!addressPoint) {
+      setErrors({ address: 'Выберите адрес из подсказок или укажите точку на карте' });
+      return false;
     }
-    setErrors(fieldErrors);
-    return false;
+    setErrors({});
+    return true;
   };
 
   const resetForm = () => {
     setName('');
     setPhone('');
     setAddress('');
+    setAddressPoint(null);
     setDeliverySlot('');
+    setPaymentMethod('');
     setComment('');
     setErrors({});
+    setSpendBonuses(false);
+    setBonusBalance(0);
   };
 
   const handleSubmit = async () => {
@@ -112,8 +184,12 @@ export function CheckoutDialog({ open, onOpenChange }: CheckoutDialogProps) {
           clientName: name,
           clientPhone: phone,
           address,
+          addressLat: addressPoint?.lat,
+          addressLng: addressPoint?.lng,
           deliverySlot,
           comment,
+          paymentMethod,
+          spendBonuses,
           items: items.map((item) => ({
             flowerId: item.flowerId,
             name: item.name,
@@ -193,15 +269,15 @@ export function CheckoutDialog({ open, onOpenChange }: CheckoutDialogProps) {
             <Label htmlFor="checkout-address">
               Адрес доставки <span className="text-primary">*</span>
             </Label>
-            <Input
-              id="checkout-address"
-              placeholder="Улица, дом, квартира"
-              value={address}
-              onChange={(e) => {
-                setAddress(e.target.value);
+            <AddressPicker
+              open={open}
+              address={address}
+              disabled={submitting}
+              onAddressChange={setAddress}
+              onPointChange={setAddressPoint}
+              onErrorClear={() => {
                 if (errors.address) setErrors((prev) => ({ ...prev, address: undefined }));
               }}
-              disabled={submitting}
             />
             {errors.address && <p className="text-sm text-red-500">{errors.address}</p>}
           </div>
@@ -231,6 +307,39 @@ export function CheckoutDialog({ open, onOpenChange }: CheckoutDialogProps) {
             </Select>
             {errors.deliverySlot && (
               <p className="text-sm text-red-500">{errors.deliverySlot}</p>
+            )}
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <Label>
+              Оплата <span className="text-primary">*</span>
+            </Label>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+              {PAYMENT_METHODS.map((method) => (
+                <button
+                  key={method.value}
+                  type="button"
+                  disabled={submitting}
+                  onClick={() => {
+                    setPaymentMethod(method.value);
+                    if (errors.paymentMethod) {
+                      setErrors((prev) => ({ ...prev, paymentMethod: undefined }));
+                    }
+                  }}
+                  className={cn(
+                    'border px-3 py-2 text-left cursor-pointer transition-colors',
+                    paymentMethod === method.value
+                      ? 'border-primary bg-primary/5'
+                      : 'hover:bg-muted'
+                  )}
+                >
+                  <p className="text-sm font-medium">{method.label}</p>
+                  <p className="text-xs text-muted-foreground">{method.deliveryHint}</p>
+                </button>
+              ))}
+            </div>
+            {errors.paymentMethod && (
+              <p className="text-sm text-red-500">{errors.paymentMethod}</p>
             )}
           </div>
 
@@ -266,9 +375,27 @@ export function CheckoutDialog({ open, onOpenChange }: CheckoutDialogProps) {
           <div className="flex items-center justify-between">
             <span className="font-semibold text-slate-700">Итого:</span>
             <span className="text-xl font-display text-primary">
-              {currentTotal.toLocaleString('ru-RU')} ₽
+              {payable.toLocaleString('ru-RU')} ₽
             </span>
           </div>
+          {bonusEnabled && bonusPercent > 0 ? (
+            <p className="text-sm text-muted-foreground">
+              Начислим {willEarn.toLocaleString('ru-RU')} ₽ бонусами ({bonusPercent}% от оплаты).
+            </p>
+          ) : null}
+          {bonusEnabled && bonusBalance > 0 ? (
+            <label className="flex items-start gap-2 text-sm cursor-pointer">
+              <Checkbox
+                checked={spendBonuses}
+                onCheckedChange={(v) => setSpendBonuses(v === true)}
+                disabled={submitting}
+              />
+              <span>
+                Списать {maxSpend(currentTotal, bonusBalance).toLocaleString('ru-RU')} ₽ бонусами
+                (доступно {bonusBalance.toLocaleString('ru-RU')} ₽)
+              </span>
+            </label>
+          ) : null}
         </div>
 
         <DialogFooter className="gap-2 sm:gap-0">

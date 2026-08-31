@@ -1,20 +1,52 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ShoppingBag } from 'lucide-react';
 import { useCartStore } from '@/store/cart-store';
+import type { PublicPromo } from '@/lib/promo';
 
 interface StoreHeaderProps {
   onCartClick: () => void;
+}
+
+function readPromos(data: unknown): PublicPromo[] {
+  if (data && typeof data === 'object' && Array.isArray((data as { items?: unknown }).items)) {
+    return (data as { items: PublicPromo[] }).items;
+  }
+  return [];
 }
 
 export function StoreHeader({ onCartClick }: StoreHeaderProps) {
   const count = useCartStore((s) =>
     s.items.reduce((sum, item) => sum + item.quantity, 0)
   );
+  const [promos, setPromos] = useState<PublicPromo[]>([]);
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const res = await fetch('/api/promo');
+        if (!res.ok) return;
+        setPromos(readPromos(await res.json()));
+      } catch {
+        setPromos([]);
+      }
+    };
+    void load();
+  }, []);
 
   return (
     <header className="fixed top-0 inset-x-0 z-40 bg-[#f4eee4]/55 backdrop-blur-md">
+      {promos.length > 0 ? (
+        <div className="px-5 sm:px-8 lg:px-12 py-2 border-b border-border/50 text-center">
+          <p className="text-[11px] tracking-[0.22em] uppercase text-foreground">
+            {promos
+              .map((promo) => `${promo.badge} · −${promo.discountPercent}% · ${promo.title}`)
+              .join('  ·  ')}
+          </p>
+        </div>
+      ) : null}
       <div className="flex items-center justify-between px-5 sm:px-8 lg:px-12 h-16 sm:h-[4.5rem]">
         <a href="/" className="font-display text-[1.65rem] font-semibold tracking-tight leading-none">
           Atelier

@@ -1,5 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
+import { saleUnitPrice } from '@/lib/promo';
+import { getPromos } from '@/lib/promo-store';
+import { applyBonuses, getBonusSettings } from '@/lib/bonus-store';
+import { isPaymentMethod } from '@/lib/payment';
+import { getDeliveryZone } from '@/lib/delivery-zone-store';
+import { isInsideZone, normalizeLatLng, zoneRestricts } from '@/lib/geo';
 
 export async function POST(request: NextRequest) {
   try {
@@ -19,11 +25,35 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Укажите адрес доставки' }, { status: 400 });
     }
 
+    const point = normalizeLatLng({ lat: body.addressLat, lng: body.addressLng });
+    if (!point) {
+      return NextResponse.json(
+        { error: 'Выберите адрес из подсказок или укажите точку на карте' },
+        { status: 400 }
+      );
+    }
+
+    const zone = await getDeliveryZone();
+    if (zoneRestricts(zone) && !isInsideZone(point, zone)) {
+      return NextResponse.json(
+        { error: 'Этот адрес вне зоны доставки' },
+        { status: 400 }
+      );
+    }
+
     if (!Array.isArray(items) || items.length === 0) {
       return NextResponse.json({ error: 'Order must contain at least one item' }, { status: 400 });
     }
 
+    if (!isPaymentMethod(body.paymentMethod)) {
+      return NextResponse.json(
+        { error: 'Выберите оплату: наличные, терминал или QR' },
+        { status: 400 }
+      );
+    }
+
     // Validate each item and check stock availability
+    const promos = await getPromos();
     const validatedItems: { flowerId: string; quantity: number; name: string; price: number }[] = [];
 
     for (const item of items) {
@@ -68,23 +98,33 @@ export async function POST(request: NextRequest) {
         flowerId: flower.id,
         quantity,
         name: flower.name,
-        price: flower.price,
+        price: saleUnitPrice(flower.price, promos, flower.id),
       });
     }
 
     // Calculate total
-    const totalAmount = validatedItems.reduce(
+    const goodsTotal = validatedItems.reduce(
       (sum, item) => sum + item.price * item.quantity,
       0
     );
+    const spendRequested = body.spendBonuses === true ? goodsTotal : Math.max(0, Math.floor(Number(body.bonusSpend) || 0));
+    const bonusSettings = await getBonusSettings();
 
-    // Create order with items in a transaction
     const order = await db.$transaction(async (tx) => {
+      const bonus = await applyBonuses(tx, {
+        phone: clientPhone.trim(),
+        goodsTotal,
+        spendRequested,
+        settings: bonusSettings,
+      });
+
       const newOrder = await tx.order.create({
         data: {
           clientName: clientName.trim(),
           clientPhone: clientPhone.trim(),
           address: address.trim(),
+          addressLat: point.lat,
+          addressLng: point.lng,
           deliverySlot:
             typeof deliverySlot === 'string' && deliverySlot.trim()
               ? deliverySlot.trim()
@@ -92,7 +132,10 @@ export async function POST(request: NextRequest) {
           comment:
             typeof comment === 'string' && comment.trim() ? comment.trim() : null,
           source: 'online',
-          totalAmount,
+          paymentMethod: body.paymentMethod,
+          totalAmount: bonus.totalAmount,
+          bonusSpent: bonus.spent,
+          bonusEarned: bonus.earned,
           items: {
             create: validatedItems.map((item) => ({
               flowerId: item.flowerId,

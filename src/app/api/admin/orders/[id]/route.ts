@@ -1,5 +1,6 @@
 import { db } from '@/lib/db'
 import { requireAdmin } from '@/lib/admin-auth'
+import { revertBonuses } from '@/lib/bonus-store'
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function PATCH(
@@ -24,31 +25,38 @@ export async function PATCH(
 
     // If cancelling an order — handle stock based on choice
     if (status === 'cancelled' && previousStatus !== 'cancelled') {
-      if (restoreStock === true) {
-        await Promise.all(
-          existingOrder.items
-            .filter((item) => item.flowerId)
-            .map((item) =>
-              db.flower.update({
-                where: { id: item.flowerId as string },
-                data: { stock: { increment: item.quantity } },
+      await db.$transaction(async (tx) => {
+        if (restoreStock === true) {
+          await Promise.all(
+            existingOrder.items
+              .filter((item) => item.flowerId)
+              .map((item) =>
+                tx.flower.update({
+                  where: { id: item.flowerId as string },
+                  data: { stock: { increment: item.quantity } },
+                })
+              )
+          )
+        } else if (restoreStock === false) {
+          await Promise.all(
+            existingOrder.items.map((item) =>
+              tx.writeOff.create({
+                data: {
+                  flowerId: item.flowerId,
+                  flowerName: item.flowerName,
+                  quantity: item.quantity,
+                  reason: `Списание по отменённому заказу ${id.slice(0, 8)}`,
+                },
               })
             )
-        )
-      } else if (restoreStock === false) {
-        await Promise.all(
-          existingOrder.items.map((item) =>
-            db.writeOff.create({
-              data: {
-                flowerId: item.flowerId,
-                flowerName: item.flowerName,
-                quantity: item.quantity,
-                reason: `Списание по отменённому заказу ${id.slice(0, 8)}`,
-              },
-            })
           )
-        )
-      }
+        }
+        await revertBonuses(tx, {
+          phone: existingOrder.clientPhone,
+          spent: existingOrder.bonusSpent,
+          earned: existingOrder.bonusEarned,
+        })
+      })
     }
 
     const order = await db.order.update({

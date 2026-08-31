@@ -5,6 +5,7 @@ export interface CartItem {
   flowerId: string;
   name: string;
   price: number;
+  listPrice?: number;
   quantity: number;
   imageUrl?: string | null;
 }
@@ -15,6 +16,7 @@ interface CartStore {
   removeItem: (flowerId: string) => void;
   updateQuantity: (flowerId: string, quantity: number) => void;
   clearCart: () => void;
+  keepOnlyIds: (ids: string[]) => void;
   total: () => number;
   itemCount: () => number;
 }
@@ -32,10 +34,12 @@ function sanitizeItems(raw: unknown): CartItem[] {
       if (!flowerId || !name || !Number.isFinite(price) || !Number.isFinite(quantity) || quantity <= 0) {
         return null;
       }
+      const listPrice = Number(row.listPrice);
       return {
         flowerId,
         name,
         price,
+        listPrice: Number.isFinite(listPrice) && listPrice > price ? listPrice : undefined,
         quantity,
         imageUrl: typeof row.imageUrl === 'string' ? row.imageUrl : row.imageUrl === null ? null : undefined,
       } satisfies CartItem;
@@ -56,7 +60,13 @@ export const useCartStore = create<CartStore>()(
           set({
             items: items.map((i) =>
               i.flowerId === item.flowerId
-                ? { ...i, quantity: i.quantity + item.quantity }
+                ? {
+                    ...i,
+                    quantity: i.quantity + item.quantity,
+                    price: item.price,
+                    listPrice: item.listPrice,
+                    imageUrl: item.imageUrl ?? i.imageUrl,
+                  }
                 : i
             ),
           });
@@ -83,6 +93,12 @@ export const useCartStore = create<CartStore>()(
 
       clearCart: () => {
         set({ items: [] });
+      },
+
+      keepOnlyIds: (ids: string[]) => {
+        const allowed = new Set(ids);
+        const next = get().items.filter((item) => allowed.has(item.flowerId));
+        if (next.length !== get().items.length) set({ items: next });
       },
 
       total: () => {

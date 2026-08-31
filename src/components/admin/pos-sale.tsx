@@ -9,7 +9,10 @@ import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Minus, Plus, ShoppingBag, Trash2 } from 'lucide-react'
 import { PAYMENT_METHODS, type PaymentMethod } from '@/lib/payment'
+import { saleUnitPrice, type PromoConfig } from '@/lib/promo'
+import { earnBonuses, maxSpend, normalizePhone } from '@/lib/bonus'
 import { cn } from '@/lib/utils'
+import { Checkbox } from '@/components/ui/checkbox'
 
 type Flower = {
   id: string
@@ -32,11 +35,29 @@ export function PosSale({ onSold }: { onSold?: () => void }) {
   const [clientPhone, setClientPhone] = useState('')
   const [comment, setComment] = useState('')
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | ''>('')
+  const [promos, setPromos] = useState<PromoConfig[]>([])
+  const [bonusEnabled, setBonusEnabled] = useState(false)
+  const [bonusPercent, setBonusPercent] = useState(0)
+  const [bonusBalance, setBonusBalance] = useState(0)
+  const [spendBonuses, setSpendBonuses] = useState(false)
 
   const load = useCallback(async () => {
     try {
-      const res = await fetch('/api/admin/flowers')
-      if (res.ok) setFlowers(await res.json())
+      const [flowersRes, promoRes, bonusRes] = await Promise.all([
+        fetch('/api/admin/flowers'),
+        fetch('/api/admin/promo'),
+        fetch('/api/admin/bonus'),
+      ])
+      if (flowersRes.ok) setFlowers(await flowersRes.json())
+      if (promoRes.ok) {
+        const data = await promoRes.json()
+        setPromos(Array.isArray(data?.promos) ? data.promos : [])
+      }
+      if (bonusRes.ok) {
+        const data = await bonusRes.json()
+        setBonusEnabled(Boolean(data.enabled))
+        setBonusPercent(Number(data.percent) || 0)
+      }
     } catch {
       toast.error('Не удалось загрузить товары')
     } finally {
@@ -72,7 +93,37 @@ export function PosSale({ onSold }: { onSold?: () => void }) {
       .filter((line): line is CartLine => Boolean(line))
   }, [cart, flowers])
 
-  const total = lines.reduce((sum, line) => sum + line.flower.price * line.quantity, 0)
+  const priceOf = (flower: Flower) => saleUnitPrice(flower.price, promos, flower.id)
+
+  const total = lines.reduce((sum, line) => sum + priceOf(line.flower) * line.quantity, 0)
+  const spendAmount = spendBonuses ? maxSpend(total, bonusBalance) : 0
+  const payable = total - spendAmount
+  const willEarn = bonusEnabled ? earnBonuses(payable, bonusPercent) : 0
+
+  useEffect(() => {
+    if (!bonusEnabled) {
+      setBonusBalance(0)
+      return
+    }
+    const key = normalizePhone(clientPhone)
+    if (!key) {
+      setBonusBalance(0)
+      return
+    }
+    const timer = window.setTimeout(() => {
+      void (async () => {
+        try {
+          const res = await fetch(`/api/bonus?phone=${encodeURIComponent(clientPhone)}`)
+          if (!res.ok) return
+          const data = await res.json()
+          setBonusBalance(Number(data.balance) || 0)
+        } catch {
+          setBonusBalance(0)
+        }
+      })()
+    }, 400)
+    return () => window.clearTimeout(timer)
+  }, [bonusEnabled, clientPhone])
 
   const add = (flower: Flower) => {
     setCart((prev) => {
@@ -115,6 +166,7 @@ export function PosSale({ onSold }: { onSold?: () => void }) {
           clientPhone,
           comment,
           paymentMethod,
+          spendBonuses,
           items: lines.map((line) => ({ flowerId: line.flower.id, quantity: line.quantity })),
         }),
       })
@@ -123,12 +175,13 @@ export function PosSale({ onSold }: { onSold?: () => void }) {
         toast.error(data.error || 'Не удалось оформить')
         return
       }
-      toast.success(`Продажа на ${total.toLocaleString('ru-RU')} ₽ оформлена`)
+      toast.success(`Продажа на ${payable.toLocaleString('ru-RU')} ₽ оформлена`)
       setCart({})
       setClientName('')
       setClientPhone('')
       setComment('')
       setPaymentMethod('')
+      setSpendBonuses(false)
       await load()
       onSold?.()
     } catch {
@@ -146,7 +199,7 @@ export function PosSale({ onSold }: { onSold?: () => void }) {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
         />
-        <div className="rounded-lg border overflow-hidden">
+        <div className="admin-surface overflow-hidden">
           <div className="max-h-[520px] overflow-y-auto">
             {loading ? (
               <div className="p-4 space-y-2">
@@ -175,7 +228,11 @@ export function PosSale({ onSold }: { onSold?: () => void }) {
                         ) : null}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        {flower.price.toLocaleString('ru-RU')} ₽ · остаток {flower.stock}
+                        {priceOf(flower).toLocaleString('ru-RU')} ₽
+                        {priceOf(flower) < flower.price
+                          ? ` · было ${flower.price.toLocaleString('ru-RU')} ₽`
+                          : ''}
+                        {' · '}остаток {flower.stock}
                         {flower.category ? ` · ${flower.category}` : ''}
                       </p>
                     </div>
@@ -191,7 +248,7 @@ export function PosSale({ onSold }: { onSold?: () => void }) {
         </div>
       </div>
 
-      <div className="rounded-lg border p-4 space-y-4 h-fit">
+      <div className="admin-surface p-4 space-y-4 h-fit">
         <h3 className="font-semibold flex items-center gap-2">
           <ShoppingBag className="w-4 h-4" />
           Чек
@@ -205,7 +262,7 @@ export function PosSale({ onSold }: { onSold?: () => void }) {
                 <div className="min-w-0 flex-1">
                   <p className="text-sm truncate">{line.flower.name}</p>
                   <p className="text-xs text-muted-foreground">
-                    {(line.flower.price * line.quantity).toLocaleString('ru-RU')} ₽
+                    {(priceOf(line.flower) * line.quantity).toLocaleString('ru-RU')} ₽
                   </p>
                 </div>
                 <div className="flex items-center gap-1">
@@ -279,8 +336,21 @@ export function PosSale({ onSold }: { onSold?: () => void }) {
 
         <div className="flex items-center justify-between pt-1">
           <span className="text-sm text-muted-foreground">Итого</span>
-          <span className="font-mono text-lg font-semibold">{total.toLocaleString('ru-RU')} ₽</span>
+          <span className="font-mono text-lg font-semibold">{payable.toLocaleString('ru-RU')} ₽</span>
         </div>
+        {bonusEnabled && bonusPercent > 0 && normalizePhone(clientPhone) ? (
+          <p className="text-xs text-muted-foreground">
+            Начислим {willEarn.toLocaleString('ru-RU')} ₽ бонусами
+          </p>
+        ) : null}
+        {bonusEnabled && bonusBalance > 0 ? (
+          <label className="flex items-start gap-2 text-sm cursor-pointer">
+            <Checkbox checked={spendBonuses} onCheckedChange={(v) => setSpendBonuses(v === true)} />
+            <span>
+              Списать {maxSpend(total, bonusBalance).toLocaleString('ru-RU')} ₽ бонусами
+            </span>
+          </label>
+        ) : null}
         <Button
           className="w-full cursor-pointer"
           disabled={saving || lines.length === 0 || !paymentMethod}

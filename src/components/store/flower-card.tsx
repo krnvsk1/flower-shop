@@ -14,6 +14,8 @@ export interface Flower {
   name: string;
   description: string | null;
   price: number;
+  salePrice?: number | null;
+  discountPercent?: number | null;
   stock: number;
   imageUrl?: string | null;
   category: string | null;
@@ -48,6 +50,8 @@ export function FlowerCard({ flower, expanded, featured = false, onToggle }: Flo
   const inStock = flower.stock > 0;
   const maxQty = Math.max(flower.stock, 1);
   const letter = flower.name.trim().charAt(0).toUpperCase();
+  const unitPrice = flower.salePrice ?? flower.price;
+  const onSale = flower.salePrice != null && flower.salePrice < flower.price;
 
   const handleAddToCart = (e: MouseEvent) => {
     e.stopPropagation();
@@ -60,7 +64,8 @@ export function FlowerCard({ flower, expanded, featured = false, onToggle }: Flo
     const cartItem: CartItem = {
       flowerId: flower.id,
       name: flower.name,
-      price: flower.price,
+      price: unitPrice,
+      listPrice: onSale ? flower.price : undefined,
       quantity,
       imageUrl: flower.imageUrl,
     };
@@ -149,11 +154,16 @@ export function FlowerCard({ flower, expanded, featured = false, onToggle }: Flo
             />
             <div
               className={cn(
-                'absolute top-4 left-4 text-[10px] tracking-[0.28em] uppercase',
+                'absolute top-4 left-4 right-4 flex items-start justify-between gap-3 text-[10px] tracking-[0.28em] uppercase',
                 showPhoto ? 'text-primary-foreground/90' : 'text-foreground/55'
               )}
             >
-              {flower.category || 'Цветы'}
+              <span>{flower.category || 'Цветы'}</span>
+              {onSale ? (
+                <span className={showPhoto ? 'text-primary-foreground' : 'text-primary'}>
+                  −{flower.discountPercent}%
+                </span>
+              ) : null}
             </div>
             <div
               className={cn(
@@ -170,8 +180,17 @@ export function FlowerCard({ flower, expanded, featured = false, onToggle }: Flo
                 {flower.name}
               </h3>
               <div className="mt-3 flex items-end justify-between gap-3">
-                <span className="font-display text-xl sm:text-2xl">
-                  {flower.price.toLocaleString('ru-RU')} ₽
+                <span className="font-display text-xl sm:text-2xl leading-none">
+                  {onSale ? (
+                    <>
+                      <span className="mr-2 text-[0.65em] line-through opacity-60">
+                        {flower.price.toLocaleString('ru-RU')} ₽
+                      </span>
+                      {unitPrice.toLocaleString('ru-RU')} ₽
+                    </>
+                  ) : (
+                    <>{unitPrice.toLocaleString('ru-RU')} ₽</>
+                  )}
                 </span>
                 <span className="text-[10px] tracking-[0.18em] uppercase opacity-80">
                   {inStock ? 'В наличии' : 'Нет'}
@@ -228,7 +247,7 @@ export function FlowerCard({ flower, expanded, featured = false, onToggle }: Flo
                       </Button>
                     </div>
                     <span className="font-display text-xl">
-                      {(flower.price * qty).toLocaleString('ru-RU')} ₽
+                      {(unitPrice * qty).toLocaleString('ru-RU')} ₽
                     </span>
                   </div>
                   <Button

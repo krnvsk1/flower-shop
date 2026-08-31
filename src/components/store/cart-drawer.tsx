@@ -113,6 +113,11 @@ export function CartDrawer({ open, onOpenChange, onCheckout }: CartDrawerProps) 
                       </div>
                       <p className="mt-2 font-display text-lg">
                         {(item.price * item.quantity).toLocaleString('ru-RU')} ₽
+                        {item.listPrice && item.listPrice > item.price ? (
+                          <span className="ml-2 text-base line-through text-muted-foreground">
+                            {(item.listPrice * item.quantity).toLocaleString('ru-RU')} ₽
+                          </span>
+                        ) : null}
                       </p>
                       <div className="mt-auto pt-4 flex items-center gap-4">
                         <div className="inline-flex items-center gap-3 text-foreground">

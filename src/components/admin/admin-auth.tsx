@@ -4,6 +4,7 @@ import { useEffect, useState, type ReactNode } from 'react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Lock } from 'lucide-react'
+import { unlockOrderChime } from '@/lib/order-chime'
 
 export function AdminAuth({ children }: { children: ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
@@ -46,6 +47,7 @@ export function AdminAuth({ children }: { children: ReactNode }) {
       }
       setIsAuthenticated(true)
       setPassword('')
+      unlockOrderChime()
     } catch {
       setError('Не удалось войти')
     } finally {
@@ -59,7 +61,7 @@ export function AdminAuth({ children }: { children: ReactNode }) {
 
   if (checking) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background text-sm text-muted-foreground">
+      <div className="admin-shell store-hero-wash min-h-screen flex items-center justify-center text-sm text-muted-foreground">
         Проверка сессии...
       </div>
     )
@@ -67,11 +69,19 @@ export function AdminAuth({ children }: { children: ReactNode }) {
 
   if (!isAuthenticated) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background p-4">
-        <div className="w-full max-w-sm border border-border bg-card px-8 py-10">
-          <p className="text-[11px] tracking-[0.32em] uppercase text-brass text-center mb-3">Atelier</p>
-          <h1 className="font-display text-3xl text-center mb-2">Кабинет</h1>
-          <p className="text-sm text-muted-foreground text-center mb-8">Введите пароль, чтобы продолжить</p>
+      <div className="admin-shell store-hero-wash min-h-screen flex flex-col justify-end px-5 sm:px-8 lg:px-12 pb-16 pt-24 relative overflow-hidden">
+        <p className="italic absolute right-4 sm:right-10 top-[28%] text-foreground/10 text-[26vw] leading-none select-none pointer-events-none">
+          atelier
+        </p>
+        <div className="relative w-full max-w-md">
+          <p className="text-[10px] tracking-[0.42em] uppercase text-brass mb-4">Atelier · кабинет</p>
+          <h1 className="font-medium text-5xl sm:text-6xl leading-[0.9] tracking-tight mb-3">
+            Вход
+            <span className="italic font-normal text-primary"> в ателье</span>
+          </h1>
+          <p className="text-[15px] leading-relaxed text-muted-foreground mb-8 max-w-sm">
+            Введите пароль, чтобы открыть заказы, витрину и склад.
+          </p>
           <div className="relative mb-4">
             <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
@@ -80,15 +90,15 @@ export function AdminAuth({ children }: { children: ReactNode }) {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               onKeyDown={handleKeyDown}
-              className="pl-10 rounded-none h-11"
+              className="pl-10 rounded-none h-12 bg-card/70"
               autoFocus
             />
           </div>
           {error ? (
-            <p className="text-sm text-destructive text-center font-medium mb-4">{error}</p>
+            <p className="text-sm text-destructive font-medium mb-4">{error}</p>
           ) : null}
           <Button
-            className="w-full bg-primary hover:bg-primary/90 text-primary-foreground cursor-pointer rounded-none h-11"
+            className="w-full sm:w-auto min-w-[12rem] bg-primary hover:bg-primary/90 text-primary-foreground cursor-pointer rounded-none h-12 text-[11px] tracking-[0.22em] uppercase"
             onClick={() => void handleLogin()}
             disabled={loading || !password}
           >

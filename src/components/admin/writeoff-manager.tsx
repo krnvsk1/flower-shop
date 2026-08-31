@@ -161,7 +161,7 @@ export function WriteOffManager() {
   return (
     <div className="space-y-6">
       {/* Write-off Form */}
-      <div className="rounded-lg border p-6 space-y-4">
+      <div className="admin-surface p-6 space-y-4">
         <h3 className="text-lg font-semibold">Списать товар</h3>
         <Separator />
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -215,7 +215,7 @@ export function WriteOffManager() {
       </div>
 
       {/* Write-off History */}
-      <div className="rounded-lg border overflow-hidden">
+      <div className="admin-surface overflow-hidden">
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>

@@ -21,7 +21,7 @@ export async function GET() {
       lowStockItems,
     ] = await Promise.all([
       db.flower.count(),
-      db.flower.count({ where: { active: true } }),
+      db.flower.count({ where: { active: true, stock: { gt: 0 } } }),
       db.order.count(),
       db.order.count({ where: { status: 'new' } }),
       db.order.count({ where: { status: 'processing' } }),

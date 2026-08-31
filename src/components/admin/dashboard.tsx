@@ -6,17 +6,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
-import {
-  Package,
-  ShoppingCart,
-  DollarSign,
-  AlertTriangle,
-  Flower2,
-  ClipboardList,
-  ArrowRight,
-} from 'lucide-react'
+import { ArrowRight } from 'lucide-react'
 import { LowStockSettings } from '@/components/admin/low-stock-settings'
 import type { StockSettings } from '@/lib/stock-settings'
+import { notifyOrdersChanged } from '@/lib/order-chime'
 
 type RecentOrder = {
   id: string
@@ -59,67 +52,53 @@ export type DashboardNav = {
 const statCards: {
   key: keyof DashboardStats
   label: string
-  icon: typeof Package
-  color: string
-  border: string
+  accent: string
   format?: 'currency'
   nav: DashboardNav
 }[] = [
   {
     key: 'pendingOrders',
     label: 'Новые заказы',
-    icon: ClipboardList,
-    color: 'bg-orange-100 text-orange-600',
-    border: 'border-orange-200',
+    accent: 'text-primary',
     nav: { tab: 'orders', orderStatus: 'new' },
   },
   {
     key: 'processingOrders',
     label: 'В работе',
-    icon: ShoppingCart,
-    color: 'bg-amber-100 text-amber-600',
-    border: 'border-amber-200',
+    accent: 'text-brass',
     nav: { tab: 'orders', orderStatus: 'processing' },
   },
   {
     key: 'lowStockCount',
     label: 'Мало на складе',
-    icon: AlertTriangle,
-    color: 'bg-rose-100 text-rose-600',
-    border: 'border-rose-200',
+    accent: 'text-primary',
     nav: { tab: 'flowers', lowStock: true },
   },
   {
     key: 'totalRevenue',
     label: 'Выручка',
-    icon: DollarSign,
-    color: 'bg-emerald-100 text-emerald-600',
-    border: 'border-emerald-200',
+    accent: 'text-sage',
     format: 'currency',
     nav: { tab: 'orders' },
   },
   {
     key: 'activeFlowers',
     label: 'На витрине',
-    icon: Flower2,
-    color: 'bg-emerald-100 text-emerald-600',
-    border: 'border-emerald-200',
+    accent: 'text-sage',
     nav: { tab: 'flowers' },
   },
   {
     key: 'totalFlowers',
     label: 'Всего товаров',
-    icon: Package,
-    color: 'bg-rose-100 text-rose-600',
-    border: 'border-rose-200',
+    accent: 'text-foreground',
     nav: { tab: 'flowers' },
   },
 ]
 
 function orderStatusBadge(status: string) {
-  if (status === 'new') return { text: 'Новый', className: 'bg-sky-100 text-sky-700' }
-  if (status === 'processing') return { text: 'В работе', className: 'bg-amber-100 text-amber-700' }
-  return { text: status, className: 'bg-slate-100 text-slate-700' }
+  if (status === 'new') return { text: 'Новый', className: 'rounded-none bg-secondary text-primary' }
+  if (status === 'processing') return { text: 'В работе', className: 'rounded-none bg-accent text-brass' }
+  return { text: status, className: 'rounded-none bg-muted text-muted-foreground' }
 }
 
 export function Dashboard({ onNavigate }: { onNavigate: (nav: DashboardNav) => void }) {
@@ -152,6 +131,7 @@ export function Dashboard({ onNavigate }: { onNavigate: (nav: DashboardNav) => v
       })
       if (!res.ok) throw new Error()
       toast.success(`Заказ ${order.clientName} взят в работу`)
+      notifyOrdersChanged()
       await load()
     } catch {
       toast.error('Не удалось обновить заказ')
@@ -199,23 +179,20 @@ export function Dashboard({ onNavigate }: { onNavigate: (nav: DashboardNav) => v
               key={card.key}
               type="button"
               onClick={() => onNavigate(card.nav)}
-              className="text-left cursor-pointer"
+              className="text-left cursor-pointer group"
             >
-              <Card className={`border ${card.border} hover:shadow-md transition-shadow h-full`}>
+              <Card className="border-border/70 hover:border-foreground/30 transition-colors h-full">
                 <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-1">
-                      <p className="text-sm text-muted-foreground font-medium">{card.label}</p>
-                      <p className="text-2xl font-bold text-foreground">{displayValue}</p>
-                      <p className="text-xs text-primary flex items-center gap-1">
-                        Открыть
-                        <ArrowRight className="w-3 h-3" />
-                      </p>
-                    </div>
-                    <div className={`p-3 rounded-xl ${card.color}`}>
-                      <Icon className="w-5 h-5" />
-                    </div>
-                  </div>
+                  <p className="text-[11px] tracking-[0.22em] uppercase text-muted-foreground">
+                    {card.label}
+                  </p>
+                  <p className={`text-4xl leading-none mt-3 ${card.accent}`}>
+                    {displayValue}
+                  </p>
+                  <p className="mt-4 text-[11px] tracking-[0.22em] uppercase text-foreground/50 group-hover:text-primary flex items-center gap-1 transition-colors">
+                    Открыть
+                    <ArrowRight className="w-3 h-3" />
+                  </p>
                 </CardContent>
               </Card>
             </button>
@@ -226,7 +203,7 @@ export function Dashboard({ onNavigate }: { onNavigate: (nav: DashboardNav) => v
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-base">Последние заказы</CardTitle>
+            <CardTitle className="text-2xl font-medium">Последние заказы</CardTitle>
             <Button
               variant="ghost"
               size="sm"
@@ -245,7 +222,7 @@ export function Dashboard({ onNavigate }: { onNavigate: (nav: DashboardNav) => v
                 return (
                   <div
                     key={order.id}
-                    className="rounded-lg border p-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"
+                    className="bg-muted/40 border border-border/80 p-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"
                   >
                     <div className="min-w-0">
                       <div className="flex items-center gap-2">
@@ -285,7 +262,7 @@ export function Dashboard({ onNavigate }: { onNavigate: (nav: DashboardNav) => v
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-base">Заканчивается на складе</CardTitle>
+            <CardTitle className="text-2xl font-medium">Мало на складе</CardTitle>
             <Button
               variant="ghost"
               size="sm"
