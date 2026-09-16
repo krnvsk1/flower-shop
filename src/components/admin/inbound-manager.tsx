@@ -31,7 +31,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { Download, FileUp, PackagePlus, Plus } from 'lucide-react'
+import { Camera, Download, FileUp, PackagePlus, Plus } from 'lucide-react'
 import { LowStockSettings } from '@/components/admin/low-stock-settings'
 import type { StockSettings } from '@/lib/stock-settings'
 import { normalizeName } from '@/lib/inbound-match'
@@ -74,6 +74,7 @@ export function InboundManager() {
   const [parsing, setParsing] = useState(false)
   const [saving, setSaving] = useState(false)
   const [fileName, setFileName] = useState<string | null>(null)
+  const [source, setSource] = useState<'file' | 'vision' | 'ocr' | null>(null)
   const [rows, setRows] = useState<PreviewRow[]>([])
   const [manualFlower, setManualFlower] = useState('')
   const [manualQty, setManualQty] = useState('')
@@ -143,11 +144,18 @@ export function InboundManager() {
         return
       }
       setFileName(data.fileName)
+      setSource(data.source || 'file')
       setRows(data.rows)
       if (data.flowers) {
         setFlowers(data.flowers)
       }
-      toast.success(`Найдено строк: ${data.rows.length}`)
+      const via =
+        data.source === 'vision'
+          ? ' по фото (AI)'
+          : data.source === 'ocr'
+            ? ' по фото (OCR)'
+            : ''
+      toast.success(`Найдено строк: ${data.rows.length}${via}`)
     } catch {
       toast.error('Сетевая ошибка')
     } finally {
@@ -225,6 +233,7 @@ export function InboundManager() {
       toast.success('Остатки пополнены')
       setRows([])
       setFileName(null)
+      setSource(null)
       await load()
     } catch {
       toast.error('Сетевая ошибка')
@@ -325,7 +334,7 @@ export function InboundManager() {
           <div>
             <h3 className="text-lg font-semibold">Приход по накладной</h3>
             <p className="text-sm text-muted-foreground mt-1">
-              Загрузите CSV или Excel: колонки «Название» и «Количество». Если цветка нет в каталоге — добавьте его или привяжите к существующему.
+              Загрузите CSV, Excel или фото накладной. Сервис распознает позиции, сопоставит с каталогом — проверьте и оприходуйте.
             </p>
           </div>
           <Button variant="outline" asChild className="cursor-pointer">
@@ -342,18 +351,45 @@ export function InboundManager() {
             className="inline-flex items-center gap-2 rounded-md border px-3 py-2 text-sm cursor-pointer hover:bg-muted"
           >
             <FileUp className="w-4 h-4" />
-            {parsing ? 'Разбор файла…' : 'Загрузить документ'}
+            {parsing ? 'Распознаём…' : 'Загрузить документ'}
           </Label>
           <Input
             id="inbound-file"
             type="file"
-            accept=".csv,.txt,.xlsx,.xls,.ods"
+            accept=".csv,.txt,.xlsx,.xls,.ods,.jpg,.jpeg,.png,.webp,.gif,.bmp,.heic,.heif,image/*"
             className="hidden"
             disabled={parsing}
-            onChange={(e) => void onFile(e.target.files?.[0])}
+            onChange={(e) => {
+              const picked = e.target.files?.[0]
+              e.target.value = ''
+              void onFile(picked)
+            }}
+          />
+          <Label
+            htmlFor="inbound-photo"
+            className="inline-flex items-center gap-2 rounded-md border px-3 py-2 text-sm cursor-pointer hover:bg-muted"
+          >
+            <Camera className="w-4 h-4" />
+            {parsing ? 'Распознаём…' : 'Фото накладной'}
+          </Label>
+          <Input
+            id="inbound-photo"
+            type="file"
+            accept="image/*"
+            capture="environment"
+            className="hidden"
+            disabled={parsing}
+            onChange={(e) => {
+              const picked = e.target.files?.[0]
+              e.target.value = ''
+              void onFile(picked)
+            }}
           />
           {fileName ? (
-            <span className="text-sm text-muted-foreground">{fileName}</span>
+            <span className="text-sm text-muted-foreground">
+              {fileName}
+              {source === 'vision' ? ' · AI' : source === 'ocr' ? ' · OCR' : ''}
+            </span>
           ) : null}
         </div>
 
@@ -438,7 +474,15 @@ export function InboundManager() {
               )}
             </p>
             <div className="flex gap-2">
-              <Button variant="outline" className="cursor-pointer" onClick={() => { setRows([]); setFileName(null) }}>
+              <Button
+                variant="outline"
+                className="cursor-pointer"
+                onClick={() => {
+                  setRows([])
+                  setFileName(null)
+                  setSource(null)
+                }}
+              >
                 Сбросить
               </Button>
               <Button

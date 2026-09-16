@@ -94,7 +94,7 @@ function headerIndex(headers: string[], candidates: string[]) {
   )
 }
 
-function parseQuantity(value: string) {
+export function parseQuantity(value: string) {
   const cleaned = value.replace(/\s/g, '').replace(',', '.')
   const match = cleaned.match(/(\d+(?:\.\d+)?)/)
   if (!match) return null
@@ -102,7 +102,7 @@ function parseQuantity(value: string) {
   return Number.isFinite(qty) && qty > 0 ? qty : null
 }
 
-function parseMoney(value: string) {
+export function parseMoney(value: string) {
   const cleaned = value.replace(/\s/g, '').replace(',', '.')
   const match = cleaned.match(/(\d+(?:\.\d+)?)/)
   if (!match) return null

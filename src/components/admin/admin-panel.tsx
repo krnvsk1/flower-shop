@@ -41,7 +41,7 @@ const NAV_ITEMS: { key: TabKey; label: string; description: string; icon: typeof
   { key: 'flowers', label: 'Товары', description: 'Ассортимент, цены и остатки', icon: Flower2 },
   { key: 'orders', label: 'Заказы', description: 'Онлайн-заказы и продажа в зале', icon: ShoppingCart },
   { key: 'clients', label: 'Клиенты', description: 'История, адреса и бонусы', icon: Users },
-  { key: 'inbound', label: 'Приход', description: 'Накладные и список закупки', icon: PackagePlus },
+  { key: 'inbound', label: 'Приход', description: 'Фото накладной, CSV и закупка', icon: PackagePlus },
   { key: 'writeoffs', label: 'Списания', description: 'Учёт испорченных цветов', icon: PackageX },
   { key: 'promo', label: 'Акции', description: 'Скидки, баннер и бонусы', icon: Percent },
   { key: 'delivery', label: 'Доставка', description: 'Зона на карте: круг или многоугольник', icon: MapPin },
