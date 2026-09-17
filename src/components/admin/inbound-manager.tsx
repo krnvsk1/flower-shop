@@ -1,10 +1,11 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { cn } from '@/lib/utils'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
   Table,
@@ -31,7 +32,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { Camera, Download, FileUp, PackagePlus, Plus } from 'lucide-react'
+import { Camera, Download, FileSpreadsheet, ImagePlus, PackagePlus, Plus } from 'lucide-react'
 import { LowStockSettings } from '@/components/admin/low-stock-settings'
 import type { StockSettings } from '@/lib/stock-settings'
 import { normalizeName } from '@/lib/inbound-match'
@@ -75,6 +76,11 @@ export function InboundManager() {
   const [saving, setSaving] = useState(false)
   const [fileName, setFileName] = useState<string | null>(null)
   const [source, setSource] = useState<'file' | 'vision' | 'ocr' | null>(null)
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null)
+  const [dragOver, setDragOver] = useState(false)
+  const cameraInputRef = useRef<HTMLInputElement>(null)
+  const photoInputRef = useRef<HTMLInputElement>(null)
+  const tableInputRef = useRef<HTMLInputElement>(null)
   const [rows, setRows] = useState<PreviewRow[]>([])
   const [manualFlower, setManualFlower] = useState('')
   const [manualQty, setManualQty] = useState('')
@@ -125,6 +131,22 @@ export function InboundManager() {
     void load()
   }, [load])
 
+  useEffect(() => {
+    return () => {
+      if (photoPreview) URL.revokeObjectURL(photoPreview)
+    }
+  }, [photoPreview])
+
+  const clearDocument = () => {
+    setRows([])
+    setFileName(null)
+    setSource(null)
+    setPhotoPreview((prev) => {
+      if (prev) URL.revokeObjectURL(prev)
+      return null
+    })
+  }
+
   const readyRows = useMemo(
     () => rows.filter((row) => row.flowerId && row.quantity > 0),
     [rows]
@@ -133,6 +155,12 @@ export function InboundManager() {
 
   const onFile = async (file: File | undefined) => {
     if (!file) return
+    const isImage = (file.type || '').startsWith('image/') || /\.(jpe?g|png|webp|gif|bmp|heic|heif)$/i.test(file.name)
+    setFileName(file.name)
+    setPhotoPreview((prev) => {
+      if (prev) URL.revokeObjectURL(prev)
+      return isImage ? URL.createObjectURL(file) : null
+    })
     setParsing(true)
     try {
       const form = new FormData()
@@ -231,9 +259,7 @@ export function InboundManager() {
         return
       }
       toast.success('Остатки пополнены')
-      setRows([])
-      setFileName(null)
-      setSource(null)
+      clearDocument()
       await load()
     } catch {
       toast.error('Сетевая ошибка')
@@ -329,12 +355,12 @@ export function InboundManager() {
   return (
     <>
     <div className="space-y-6">
-      <div className="admin-surface p-6 space-y-4">
+      <div className="admin-surface no-lift p-6 space-y-5">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h3 className="text-lg font-semibold">Приход по накладной</h3>
+            <h3 className="text-lg font-semibold">Приход по фото накладной</h3>
             <p className="text-sm text-muted-foreground mt-1">
-              Загрузите CSV, Excel или фото накладной. Сервис распознает позиции, сопоставит с каталогом — проверьте и оприходуйте.
+              Сфотографируйте бумажную накладную или выберите снимок из галереи. Сервис распознает названия, количество и закупочную цену — проверьте и оприходуйте.
             </p>
           </div>
           <Button variant="outline" asChild className="cursor-pointer">
@@ -344,36 +370,78 @@ export function InboundManager() {
             </a>
           </Button>
         </div>
-        <Separator />
-        <div className="flex flex-wrap items-center gap-3">
-          <Label
-            htmlFor="inbound-file"
-            className="inline-flex items-center gap-2 rounded-md border px-3 py-2 text-sm cursor-pointer hover:bg-muted"
-          >
-            <FileUp className="w-4 h-4" />
-            {parsing ? 'Распознаём…' : 'Загрузить документ'}
-          </Label>
-          <Input
-            id="inbound-file"
-            type="file"
-            accept=".csv,.txt,.xlsx,.xls,.ods,.jpg,.jpeg,.png,.webp,.gif,.bmp,.heic,.heif,image/*"
-            className="hidden"
-            disabled={parsing}
-            onChange={(e) => {
-              const picked = e.target.files?.[0]
-              e.target.value = ''
-              void onFile(picked)
-            }}
-          />
-          <Label
-            htmlFor="inbound-photo"
-            className="inline-flex items-center gap-2 rounded-md border px-3 py-2 text-sm cursor-pointer hover:bg-muted"
-          >
-            <Camera className="w-4 h-4" />
-            {parsing ? 'Распознаём…' : 'Фото накладной'}
-          </Label>
-          <Input
-            id="inbound-photo"
+        <div
+          className={cn(
+            'rounded-xl border-2 border-dashed px-4 py-8 min-h-[220px] flex flex-col items-center justify-center gap-4 text-center transition-colors',
+            dragOver ? 'border-emerald-600 bg-emerald-50/80' : 'border-emerald-700/30 bg-emerald-50/40',
+            parsing && 'opacity-80'
+          )}
+          onDragEnter={(e) => {
+            e.preventDefault()
+            setDragOver(true)
+          }}
+          onDragOver={(e) => {
+            e.preventDefault()
+            setDragOver(true)
+          }}
+          onDragLeave={(e) => {
+            e.preventDefault()
+            if (!e.currentTarget.contains(e.relatedTarget as Node)) setDragOver(false)
+          }}
+          onDrop={(e) => {
+            e.preventDefault()
+            setDragOver(false)
+            void onFile(e.dataTransfer.files?.[0])
+          }}
+        >
+          {photoPreview ? (
+            <img
+              src={photoPreview}
+              alt="Предпросмотр накладной"
+              className="max-h-48 w-auto rounded-lg object-contain shadow-sm"
+            />
+          ) : (
+            <div className="w-14 h-14 rounded-full bg-white border border-emerald-200 flex items-center justify-center">
+              <Camera className="w-7 h-7 text-emerald-700" />
+            </div>
+          )}
+          <div className="space-y-1">
+            <p className="font-medium">
+              {parsing
+                ? 'Распознаём накладную…'
+                : photoPreview
+                  ? fileName
+                  : 'Перетащите фото сюда или сделайте снимок'}
+            </p>
+            <p className="text-sm text-muted-foreground">
+              JPG, PNG, HEIC · до 8 МБ
+              {source === 'vision' ? ' · распознано AI' : source === 'ocr' ? ' · распознано OCR' : ''}
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center justify-center gap-2">
+            <Button
+              type="button"
+              className="bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer"
+              disabled={parsing}
+              onClick={() => cameraInputRef.current?.click()}
+            >
+              <Camera className="w-4 h-4" />
+              {parsing ? 'Распознаём…' : 'Сфотографировать'}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              className="cursor-pointer bg-white"
+              disabled={parsing}
+              onClick={() => photoInputRef.current?.click()}
+            >
+              <ImagePlus className="w-4 h-4" />
+              Выбрать фото
+            </Button>
+          </div>
+          <input
+            ref={cameraInputRef}
+            id="inbound-camera"
             type="file"
             accept="image/*"
             capture="environment"
@@ -385,14 +453,47 @@ export function InboundManager() {
               void onFile(picked)
             }}
           />
-          {fileName ? (
-            <span className="text-sm text-muted-foreground">
-              {fileName}
-              {source === 'vision' ? ' · AI' : source === 'ocr' ? ' · OCR' : ''}
-            </span>
-          ) : null}
+          <input
+            ref={photoInputRef}
+            id="inbound-photo"
+            type="file"
+            accept="image/*"
+            className="hidden"
+            disabled={parsing}
+            onChange={(e) => {
+              const picked = e.target.files?.[0]
+              e.target.value = ''
+              void onFile(picked)
+            }}
+          />
         </div>
-
+        <div className="flex flex-wrap items-center gap-3 text-sm">
+          <span className="text-muted-foreground">Нет фото — загрузите таблицу:</span>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="cursor-pointer"
+            disabled={parsing}
+            onClick={() => tableInputRef.current?.click()}
+          >
+            <FileSpreadsheet className="w-4 h-4" />
+            CSV / Excel
+          </Button>
+          <input
+            ref={tableInputRef}
+            id="inbound-file"
+            type="file"
+            accept=".csv,.txt,.xlsx,.xls,.ods"
+            className="hidden"
+            disabled={parsing}
+            onChange={(e) => {
+              const picked = e.target.files?.[0]
+              e.target.value = ''
+              void onFile(picked)
+            }}
+          />
+        </div>
       </div>
 
       <div className="admin-surface p-6 space-y-4">
@@ -477,11 +578,7 @@ export function InboundManager() {
               <Button
                 variant="outline"
                 className="cursor-pointer"
-                onClick={() => {
-                  setRows([])
-                  setFileName(null)
-                  setSource(null)
-                }}
+                onClick={clearDocument}
               >
                 Сбросить
               </Button>
