@@ -71,8 +71,26 @@ function testSplitOcrLines() {
   assert.equal(rows[1].quantity, 12)
 }
 
+function testIgnoresPhotoOverlay() {
+  const junkOnly = `
+23:01 ® wil © ED
+HDR ISO 200
+`
+  assert.equal(parseOcrTextToRows(junkOnly).length, 0)
+
+  const mixed = `
+23:01 ® wil © ED
+Роза красная 50см 25 45,00
+`
+  const rows = parseOcrTextToRows(mixed)
+  assert.equal(rows.length, 1)
+  assert.equal(rows[0].name, 'Роза красная 50см')
+  assert.equal(rows[0].quantity, 25)
+}
+
 testVisionJson()
 testOcrHeuristics()
 testTorg12Table()
 testSplitOcrLines()
+testIgnoresPhotoOverlay()
 console.log('inbound-ocr parser tests: ok')

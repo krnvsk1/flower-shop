@@ -108,12 +108,38 @@ const SIZE_RE = /\d+(?:[.,]\d+)?\s*(?:см|мм|мл|г|кг)(?![A-Za-zА-Яа-�
 const HEADER_RE =
   /^(?:№|n|п\/п|наименование|номенклатура|товар|кол-?во|количество|цена|сумма|ед(?:\.|иница)?)$/i
 
+function looksLikeOverlayJunk(line: string) {
+  const cyrillic = line.match(/[А-Яа-яЁё]/g) || []
+  if (cyrillic.length >= 3) return false
+  return (
+    /\d{1,2}:\d{2}/.test(line) ||
+    /[®©™]/.test(line) ||
+    /(?:\bwil\b|\bwifi\b|\bhdr\b|\biso\b)/i.test(line)
+  )
+}
+
 function looksLikeJunkLine(line: string) {
   const lower = line.toLowerCase()
   return (
     /^(итого|всего|сумма|ндс|подпись|м\.п\.|инн|кпп|р\/с|бик|тел|дата|страница)/i.test(lower) ||
-    /накладн|поставщик|покупатель|грузополучатель|договор|универсальн/.test(lower)
+    /накладн|поставщик|покупатель|грузополучатель|договор|универсальн/.test(lower) ||
+    looksLikeOverlayJunk(line)
   )
+}
+
+function stripClockAndDates(line: string) {
+  return line
+    .replace(/\b\d{1,2}:\d{2}(?::\d{2})?\b/g, ' ')
+    .replace(/\b\d{1,2}[./]\d{1,2}[./]\d{2,4}\b/g, ' ')
+}
+
+function looksLikeProductName(name: string) {
+  if (!name || /[®©™]/.test(name) || /\d{1,2}:\d{2}/.test(name)) return false
+  const cyrillic = name.match(/[А-Яа-яЁё]/g) || []
+  if (cyrillic.length < 3) return false
+  if (HEADER_RE.test(name)) return false
+  if (/^(итого|всего)\b/i.test(name)) return false
+  return true
 }
 
 function glueThousands(value: string) {
@@ -134,15 +160,16 @@ function stripRowIndex(line: string) {
 }
 
 function extractAmounts(line: string) {
+  const stripped = stripClockAndDates(line)
   const skip = new Set<number>()
   const sizey = /\d+(?:[.,]\d+)?\s*(?:см|мм|мл|г|кг)(?![A-Za-zА-Яа-яЁё])/gi
   let sizeMatch: RegExpExecArray | null
-  while ((sizeMatch = sizey.exec(line))) skip.add(sizeMatch.index)
+  while ((sizeMatch = sizey.exec(stripped))) skip.add(sizeMatch.index)
 
   const amounts: number[] = []
   const numberRe = /\d+(?:[.,]\d+)?/g
   let match: RegExpExecArray | null
-  while ((match = numberRe.exec(line))) {
+  while ((match = numberRe.exec(stripped))) {
     if (skip.has(match.index)) continue
     const value = Number(match[0].replace(',', '.'))
     if (Number.isFinite(value)) amounts.push(value)
@@ -235,13 +262,8 @@ function parseTableLine(line: string, lineNo: number): ParsedInboundRow | null {
   }
   if (!picked) return null
 
-  const name = extractName(line, picked.quantity)
-  if (
-    name.length < 2 ||
-    looksLikeJunkLine(name) ||
-    HEADER_RE.test(name) ||
-    !/[A-Za-zА-Яа-яЁё]/.test(name)
-  ) {
+  const name = extractName(stripClockAndDates(line), picked.quantity)
+  if (!looksLikeProductName(name)) {
     return null
   }
 
@@ -257,9 +279,9 @@ function joinBrokenLines(lines: string[]) {
   const merged: string[] = []
   for (let i = 0; i < lines.length; i++) {
     let line = lines[i]
-    const hasLetters = /[A-Za-zА-Яа-яЁё]/.test(line)
+    const hasLetters = /[А-Яа-яЁё]/.test(line)
     const amounts = extractAmounts(line.replace(SIZE_RE, ' '))
-    if (hasLetters && amounts.length === 0) {
+    if (hasLetters && !looksLikeJunkLine(line) && amounts.length === 0) {
       const extras: string[] = []
       while (i + 1 < lines.length && /^\d+(?:[.,]\d+)?(?:\s*(?:шт\.?|штук))?$/.test(lines[i + 1])) {
         extras.push(lines[i + 1])
@@ -278,7 +300,7 @@ function parseOcrLines(text: string): ParsedInboundRow[] {
     text
       .split(/\r?\n/)
       .map((line) => glueThousands(line.replace(/\s+/g, ' ').trim()))
-      .filter((line) => line.length >= 2)
+      .filter((line) => line.length >= 2 && !looksLikeOverlayJunk(line))
   )
 
   const rows: ParsedInboundRow[] = []
