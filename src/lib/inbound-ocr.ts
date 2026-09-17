@@ -103,75 +103,231 @@ export function rowsFromVisionPayload(payload: unknown): ParsedInboundRow[] {
   return rows
 }
 
+const UNIT_RE = /(?:шт\.?|штук|упак\.?|пучк(?:ов|ки)?|связ(?:ок|ка)?)/i
+const SIZE_RE = /\d+(?:[.,]\d+)?\s*(?:см|мм|мл|г|кг)(?![A-Za-zА-Яа-яЁё])/gi
+const HEADER_RE =
+  /^(?:№|n|п\/п|наименование|номенклатура|товар|кол-?во|количество|цена|сумма|ед(?:\.|иница)?)$/i
+
 function looksLikeJunkLine(line: string) {
   const lower = line.toLowerCase()
   return (
-    /^(итого|всего|сумма|ндс|подпись|м\.п\.|инн|кпп|р\/с|бик|тел)/i.test(lower) ||
-    /накладн|поставщик|покупатель|грузополучатель|договор/.test(lower)
+    /^(итого|всего|сумма|ндс|подпись|м\.п\.|инн|кпп|р\/с|бик|тел|дата|страница)/i.test(lower) ||
+    /накладн|поставщик|покупатель|грузополучатель|договор|универсальн/.test(lower)
   )
 }
 
-/** Heuristic line parser for OCR text from Russian flower invoices. */
-export function parseOcrTextToRows(text: string): ParsedInboundRow[] {
-  const lines = text
-    .split(/\r?\n/)
-    .map((line) => line.replace(/\s+/g, ' ').trim())
-    .filter((line) => line.length >= 3)
-
-  const rows: ParsedInboundRow[] = []
-
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i]
-    if (looksLikeJunkLine(line)) continue
-
-    // "25 Роза красная 120.00" — номер/кол-во в начале
-    const leadingQty = line.match(
-      /^(\d{1,5})[.)]?\s+(.+?)(?:\s+(\d+(?:[.,]\d{1,2})?)\s*(?:₽|руб\.?)?)?$/i
+function glueThousands(value: string) {
+  let next = value
+  let prev = ''
+  while (next !== prev) {
+    prev = next
+    next = next.replace(
+      /(?<![.,]\d{0,2})(\d)[ \u00a0](?=\d{3}(?:[.,]\d+)?(?:\s|$))/g,
+      '$1'
     )
-    if (leadingQty) {
-      const quantity = parseQuantity(leadingQty[1])
-      const name = leadingQty[2].replace(/[–—-]+$/g, '').trim()
-      const costPrice = leadingQty[3] ? parseMoney(leadingQty[3]) : null
-      const nameHasDigitsOnly = /^\d+$/.test(name)
-      if (
-        name.length >= 2 &&
-        quantity != null &&
-        !nameHasDigitsOnly &&
-        !looksLikeJunkLine(name) &&
-        /[A-Za-zА-Яа-яЁё]/.test(name)
-      ) {
-        rows.push({ line: i + 1, name, quantity, costPrice })
-        continue
-      }
-    }
+  }
+  return next
+}
 
-    // "Название 25 120,50" or "Название — 25 шт × 120"
-    const withQty = line.match(
-      /^(.+?)\s+(\d{1,5})\s*(?:шт\.?|штук)?\s*(?:[xх×*]|по)?\s*(\d+(?:[.,]\d{1,2})?)?\s*(?:₽|руб\.?)?$/i
-    )
-    if (withQty) {
-      const name = withQty[1]
-        .replace(/^[\d.)\-]+\s*/, '')
-        .replace(/[–—-]+$/g, '')
-        .trim()
-      const quantity = parseQuantity(withQty[2])
-      const costPrice = withQty[3] ? parseMoney(withQty[3]) : null
-      if (name.length >= 2 && quantity != null && !looksLikeJunkLine(name)) {
-        rows.push({ line: i + 1, name, quantity, costPrice })
+function stripRowIndex(line: string) {
+  return line.replace(/^\d{1,3}[\.)]\s+/, '').replace(/^№\s*\d+\s+/, '').trim()
+}
+
+function extractAmounts(line: string) {
+  const skip = new Set<number>()
+  const sizey = /\d+(?:[.,]\d+)?\s*(?:см|мм|мл|г|кг)(?![A-Za-zА-Яа-яЁё])/gi
+  let sizeMatch: RegExpExecArray | null
+  while ((sizeMatch = sizey.exec(line))) skip.add(sizeMatch.index)
+
+  const amounts: number[] = []
+  const numberRe = /\d+(?:[.,]\d+)?/g
+  let match: RegExpExecArray | null
+  while ((match = numberRe.exec(line))) {
+    if (skip.has(match.index)) continue
+    const value = Number(match[0].replace(',', '.'))
+    if (Number.isFinite(value)) amounts.push(value)
+  }
+  return amounts
+}
+
+function extractName(line: string, quantity: number) {
+  let name = line.replace(/^\d{1,3}[.)]\s+/, '')
+  name = name
+    .replace(new RegExp(`\\s*${UNIT_RE.source}\\s*`, 'gi'), ' ')
+    .replace(/[₽]/g, ' ')
+    .replace(/\b(?:руб\.?|р\.)\b/gi, ' ')
+    .replace(/[–—_|]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+  while (/\s+\d+(?:[.,]\d+)?$/.test(name)) {
+    name = name.replace(/\s+\d+(?:[.,]\d+)?$/, '').trim()
+  }
+  name = name.replace(new RegExp(`^${quantity}\\s+`), '').trim()
+  name = name.replace(/^\d{1,3}\s+(?=[A-Za-zА-Яа-яЁё])/, '').trim()
+  name = name.replace(/[-–—_|]+$/g, '').trim()
+  return name
+}
+
+function plausibleQty(value: number) {
+  const qty = Math.round(value)
+  if (qty < 1 || qty > 5000) return false
+  if (qty >= 2020 && qty <= 2035) return false
+  return true
+}
+
+function pickQtyAndPrice(amounts: number[]): { quantity: number; costPrice: number | null } | null {
+  const rounded = amounts.filter((value) => Number.isFinite(value))
+  if (rounded.length === 0) return null
+
+  if (rounded.length >= 3) {
+    for (let i = 0; i < rounded.length; i++) {
+      if (!plausibleQty(rounded[i])) continue
+      for (let j = 0; j < rounded.length; j++) {
+        if (i === j || rounded[j] <= 0) continue
+        const product = rounded[i] * rounded[j]
+        const hasSum = rounded.some(
+          (value, k) => k !== i && k !== j && Math.abs(value - product) <= 1
+        )
+        if (hasSum) {
+          return { quantity: Math.round(rounded[i]), costPrice: rounded[j] }
+        }
       }
     }
   }
 
+  const qtyFromUnit = rounded.find((value) => plausibleQty(value) && Number.isInteger(value))
+  if (rounded.length >= 2 && qtyFromUnit != null) {
+    const price = rounded.find((value) => value !== qtyFromUnit && value > 0) ?? null
+    return { quantity: Math.round(qtyFromUnit), costPrice: price }
+  }
+
+  const only = rounded[0]
+  if (only != null && plausibleQty(only)) {
+    return { quantity: Math.round(only), costPrice: rounded[1] ?? null }
+  }
+  return null
+}
+
+function parseTableLine(line: string, lineNo: number): ParsedInboundRow | null {
+  if (looksLikeJunkLine(line) || HEADER_RE.test(line)) return null
+
+  const cleaned = glueThousands(stripRowIndex(line.replace(SIZE_RE, ' ').replace(/\s+/g, ' ').trim()))
+  if (cleaned.length < 2) return null
+
+  const unitQty =
+    cleaned.match(new RegExp(`(\\d+(?:[.,]\\d+)?)\\s*${UNIT_RE.source}`, 'i')) ||
+    cleaned.match(new RegExp(`${UNIT_RE.source}\\s+(\\d+(?:[.,]\\d+)?)`, 'i'))
+
+  let picked = pickQtyAndPrice(extractAmounts(cleaned))
+  if (unitQty) {
+    const unitValue = parseQuantity(unitQty[1])
+    if (unitValue != null && plausibleQty(unitValue)) {
+      const amounts = extractAmounts(cleaned)
+      const price =
+        amounts.find(
+          (value, idx) =>
+            value !== unitValue &&
+            value >= 1 &&
+            !(idx === 0 && value <= 40 && amounts.length >= 3)
+        ) ?? null
+      picked = { quantity: unitValue, costPrice: price }
+    }
+  }
+  if (!picked) return null
+
+  const name = extractName(line, picked.quantity)
+  if (
+    name.length < 2 ||
+    looksLikeJunkLine(name) ||
+    HEADER_RE.test(name) ||
+    !/[A-Za-zА-Яа-яЁё]/.test(name)
+  ) {
+    return null
+  }
+
+  return {
+    line: lineNo,
+    name,
+    quantity: picked.quantity,
+    costPrice: picked.costPrice,
+  }
+}
+
+function joinBrokenLines(lines: string[]) {
+  const merged: string[] = []
+  for (let i = 0; i < lines.length; i++) {
+    let line = lines[i]
+    const hasLetters = /[A-Za-zА-Яа-яЁё]/.test(line)
+    const amounts = extractAmounts(line.replace(SIZE_RE, ' '))
+    if (hasLetters && amounts.length === 0) {
+      const extras: string[] = []
+      while (i + 1 < lines.length && /^\d+(?:[.,]\d+)?(?:\s*(?:шт\.?|штук))?$/.test(lines[i + 1])) {
+        extras.push(lines[i + 1])
+        i++
+        if (extras.length >= 3) break
+      }
+      if (extras.length > 0) line = `${line} ${extras.join(' ')}`
+    }
+    merged.push(line)
+  }
+  return merged
+}
+
+function parseOcrLines(text: string): ParsedInboundRow[] {
+  const lines = joinBrokenLines(
+    text
+      .split(/\r?\n/)
+      .map((line) => glueThousands(line.replace(/\s+/g, ' ').trim()))
+      .filter((line) => line.length >= 2)
+  )
+
+  const rows: ParsedInboundRow[] = []
+  const seen = new Set<string>()
+  for (let i = 0; i < lines.length; i++) {
+    const row = parseTableLine(lines[i], i + 1)
+    if (!row) continue
+    const key = `${row.name.toLowerCase()}|${row.quantity}`
+    if (seen.has(key)) continue
+    seen.add(key)
+    rows.push(row)
+  }
   return rows
+}
+
+/** Heuristic parser for OCR text from Russian flower invoices. */
+export function parseOcrTextToRows(text: string): ParsedInboundRow[] {
+  const normalized = glueThousands(
+    text
+      .replace(/\u00a0/g, ' ')
+      .replace(/[|]/g, ' ')
+      .replace(/[–—]/g, '-')
+  )
+  const fromLines = parseOcrLines(normalized)
+  if (fromLines.length > 0) return fromLines
+
+  const collapsed = normalized.replace(/\s+/g, ' ').trim()
+  if (!collapsed) return []
+  return parseOcrLines(collapsed.replace(new RegExp(`(${UNIT_RE.source})`, 'gi'), '$1\n'))
 }
 
 async function prepareImage(buffer: Buffer) {
   try {
     const sharp = (await import('sharp')).default
-    return await sharp(buffer)
-      .rotate()
-      .resize({ width: 1600, height: 1600, fit: 'inside', withoutEnlargement: true })
-      .jpeg({ quality: 85 })
+    const image = sharp(buffer).rotate()
+    const meta = await image.metadata()
+    const width = meta.width || 0
+    const shouldUpscale = width > 0 && width < 1400
+    return await image
+      .resize({
+        width: shouldUpscale ? 2200 : Math.min(width || 2200, 2600),
+        height: 2600,
+        fit: 'inside',
+        withoutEnlargement: !shouldUpscale,
+      })
+      .grayscale()
+      .normalize()
+      .sharpen()
+      .png()
       .toBuffer()
   } catch {
     return buffer
@@ -259,10 +415,25 @@ async function recognizeWithZai(image: Buffer, mimeType: string): Promise<Parsed
 async function recognizeWithTesseract(image: Buffer): Promise<{ rows: ParsedInboundRow[]; rawText: string }> {
   const { createWorker } = await import('tesseract.js')
   const worker = await createWorker(['rus', 'eng'])
+  const texts: string[] = []
   try {
-    const { data } = await worker.recognize(image)
-    const rawText = data.text || ''
-    return { rows: parseOcrTextToRows(rawText), rawText }
+    const { data: first } = await worker.recognize(image)
+    texts.push(first.text || '')
+    let rows = parseOcrTextToRows(texts[0])
+    if (rows.length === 0) {
+      await worker.setParameters({
+        tessedit_pageseg_mode: '6',
+        preserve_interword_spaces: '1',
+      })
+      const { data: second } = await worker.recognize(image)
+      texts.push(second.text || '')
+      rows = parseOcrTextToRows(second.text || '')
+      if (rows.length === 0) {
+        rows = parseOcrTextToRows(texts.join('\n'))
+      }
+    }
+    const rawText = texts.filter(Boolean).join('\n').trim()
+    return { rows, rawText }
   } finally {
     await worker.terminate()
   }
@@ -301,11 +472,12 @@ export async function recognizeInboundImage(
     const { rows, rawText } = await recognizeWithTesseract(image)
     if (rows.length > 0) return { rows, source: 'ocr', rawText }
     errors.push('Локальный OCR не нашёл строки с количеством')
-    if (rawText.trim()) {
-      throw new Error(
-        `Не удалось разобрать позиции с фото. Проверьте чёткость снимка или загрузите CSV/Excel.${errors.length ? ` (${errors[0]})` : ''}`
-      )
-    }
+    const snippet = rawText.replace(/\s+/g, ' ').trim().slice(0, 180)
+    throw new Error(
+      snippet
+        ? `Не удалось разобрать позиции с фото. Распознано: «${snippet}». Нужны название и количество в каждой строке, либо загрузите CSV/Excel.`
+        : 'Не удалось разобрать позиции с фото. Снимок слишком размытый — сфотографируйте таблицу ближе или загрузите CSV/Excel.'
+    )
   } catch (error) {
     if (error instanceof Error && error.message.startsWith('Не удалось разобрать')) {
       throw error
