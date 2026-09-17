@@ -5,7 +5,6 @@ import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { cn } from '@/lib/utils'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
   Table,
@@ -32,7 +31,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { Camera, Download, FileSpreadsheet, ImagePlus, PackagePlus, Plus } from 'lucide-react'
+import { Camera, Download, FileUp, PackagePlus, Plus } from 'lucide-react'
 import { LowStockSettings } from '@/components/admin/low-stock-settings'
 import type { StockSettings } from '@/lib/stock-settings'
 import { normalizeName } from '@/lib/inbound-match'
@@ -77,10 +76,8 @@ export function InboundManager() {
   const [fileName, setFileName] = useState<string | null>(null)
   const [source, setSource] = useState<'file' | 'vision' | 'ocr' | null>(null)
   const [photoPreview, setPhotoPreview] = useState<string | null>(null)
-  const [dragOver, setDragOver] = useState(false)
-  const cameraInputRef = useRef<HTMLInputElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const photoInputRef = useRef<HTMLInputElement>(null)
-  const tableInputRef = useRef<HTMLInputElement>(null)
   const [rows, setRows] = useState<PreviewRow[]>([])
   const [manualFlower, setManualFlower] = useState('')
   const [manualQty, setManualQty] = useState('')
@@ -358,9 +355,9 @@ export function InboundManager() {
       <div className="admin-surface no-lift p-6 space-y-5">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h3 className="text-lg font-semibold">Приход по фото накладной</h3>
+            <h3 className="text-lg font-semibold">Приход по накладной</h3>
             <p className="text-sm text-muted-foreground mt-1">
-              Сфотографируйте бумажную накладную или выберите снимок из галереи. Сервис распознает названия, количество и закупочную цену — проверьте и оприходуйте.
+              Загрузите таблицу или фото накладной. Сервис распознает позиции, сопоставит с каталогом — проверьте и оприходуйте.
             </p>
           </div>
           <Button variant="outline" asChild className="cursor-pointer">
@@ -370,81 +367,37 @@ export function InboundManager() {
             </a>
           </Button>
         </div>
-        <div
-          className={cn(
-            'rounded-xl border-2 border-dashed px-4 py-8 min-h-[220px] flex flex-col items-center justify-center gap-4 text-center transition-colors',
-            dragOver ? 'border-emerald-600 bg-emerald-50/80' : 'border-emerald-700/30 bg-emerald-50/40',
-            parsing && 'opacity-80'
-          )}
-          onDragEnter={(e) => {
-            e.preventDefault()
-            setDragOver(true)
-          }}
-          onDragOver={(e) => {
-            e.preventDefault()
-            setDragOver(true)
-          }}
-          onDragLeave={(e) => {
-            e.preventDefault()
-            if (!e.currentTarget.contains(e.relatedTarget as Node)) setDragOver(false)
-          }}
-          onDrop={(e) => {
-            e.preventDefault()
-            setDragOver(false)
-            void onFile(e.dataTransfer.files?.[0])
-          }}
-        >
-          {photoPreview ? (
-            <img
-              src={photoPreview}
-              alt="Предпросмотр накладной"
-              className="max-h-48 w-auto rounded-lg object-contain shadow-sm"
-            />
-          ) : (
-            <div className="w-14 h-14 rounded-full bg-white border border-emerald-200 flex items-center justify-center">
-              <Camera className="w-7 h-7 text-emerald-700" />
-            </div>
-          )}
-          <div className="space-y-1">
-            <p className="font-medium">
-              {parsing
-                ? 'Распознаём накладную…'
-                : photoPreview
-                  ? fileName
-                  : 'Перетащите фото сюда или сделайте снимок'}
-            </p>
-            <p className="text-sm text-muted-foreground">
-              JPG, PNG, HEIC · до 8 МБ
-              {source === 'vision' ? ' · распознано AI' : source === 'ocr' ? ' · распознано OCR' : ''}
-            </p>
-          </div>
-          <div className="flex flex-wrap items-center justify-center gap-2">
-            <Button
-              type="button"
-              className="bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer"
-              disabled={parsing}
-              onClick={() => cameraInputRef.current?.click()}
-            >
-              <Camera className="w-4 h-4" />
-              {parsing ? 'Распознаём…' : 'Сфотографировать'}
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              className="cursor-pointer bg-white"
-              disabled={parsing}
-              onClick={() => photoInputRef.current?.click()}
-            >
-              <ImagePlus className="w-4 h-4" />
-              Выбрать фото
-            </Button>
-          </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <Button
+            type="button"
+            variant="outline"
+            className="h-auto min-h-24 w-full cursor-pointer flex-col gap-2 py-5 whitespace-normal bg-white"
+            disabled={parsing}
+            onClick={() => fileInputRef.current?.click()}
+          >
+            <FileUp className="size-6" />
+            <span className="text-base font-medium">
+              {parsing ? 'Распознаём…' : 'Загрузить через файл'}
+            </span>
+            <span className="text-xs font-normal text-muted-foreground">CSV, Excel</span>
+          </Button>
+          <Button
+            type="button"
+            className="h-auto min-h-24 w-full cursor-pointer flex-col gap-2 py-5 whitespace-normal bg-emerald-600 hover:bg-emerald-700 text-white"
+            disabled={parsing}
+            onClick={() => photoInputRef.current?.click()}
+          >
+            <Camera className="size-6" />
+            <span className="text-base font-medium">
+              {parsing ? 'Распознаём…' : 'Загрузить через фото'}
+            </span>
+            <span className="text-xs font-normal text-white/80">камера или галерея</span>
+          </Button>
           <input
-            ref={cameraInputRef}
-            id="inbound-camera"
+            ref={fileInputRef}
+            id="inbound-file"
             type="file"
-            accept="image/*"
-            capture="environment"
+            accept=".csv,.txt,.xlsx,.xls,.ods"
             className="hidden"
             disabled={parsing}
             onChange={(e) => {
@@ -467,33 +420,21 @@ export function InboundManager() {
             }}
           />
         </div>
-        <div className="flex flex-wrap items-center gap-3 text-sm">
-          <span className="text-muted-foreground">Нет фото — загрузите таблицу:</span>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="cursor-pointer"
-            disabled={parsing}
-            onClick={() => tableInputRef.current?.click()}
-          >
-            <FileSpreadsheet className="w-4 h-4" />
-            CSV / Excel
-          </Button>
-          <input
-            ref={tableInputRef}
-            id="inbound-file"
-            type="file"
-            accept=".csv,.txt,.xlsx,.xls,.ods"
-            className="hidden"
-            disabled={parsing}
-            onChange={(e) => {
-              const picked = e.target.files?.[0]
-              e.target.value = ''
-              void onFile(picked)
-            }}
-          />
-        </div>
+        {fileName || photoPreview ? (
+          <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
+            {photoPreview ? (
+              <img
+                src={photoPreview}
+                alt="Предпросмотр накладной"
+                className="h-14 w-14 rounded-md object-cover border"
+              />
+            ) : null}
+            <span>
+              {fileName}
+              {source === 'vision' ? ' · AI' : source === 'ocr' ? ' · OCR' : source === 'file' ? ' · файл' : ''}
+            </span>
+          </div>
+        ) : null}
       </div>
 
       <div className="admin-surface p-6 space-y-4">
