@@ -156,8 +156,35 @@ body:has(.admin-shell) :is(h1, h2, h3, .font-display, .font-mono) {
     oklch(0.955 0.012 82);
 }
 
-.admin-shell aside {
-  background: oklch(0.96 0.012 80 / 0.92);
+.admin-shell aside.admin-nav {
+  background: oklch(0.98 0.008 82 / 0.94);
+  border-radius: 1.4rem;
+  box-shadow:
+    0 1px 2px oklch(0.35 0.04 50 / 0.04),
+    0 10px 28px oklch(0.35 0.04 50 / 0.06);
+}
+
+.admin-shell .admin-main {
+  background: oklch(0.935 0.016 80 / 0.55);
+  border-radius: 1.4rem;
+  min-height: calc(100vh - 1.5rem);
+}
+
+.admin-shell .admin-nav-item {
+  border-radius: 0.95rem;
+  transition:
+    background-color 0.18s ease,
+    color 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.admin-shell .admin-nav-item[data-active='true'] {
+  background: oklch(0.96 0.025 25);
+  box-shadow: inset 0 0 0 1px oklch(0.55 0.09 25 / 0.12);
+}
+
+.admin-shell .admin-nav-item:hover:not([data-active='true']) {
+  background: oklch(0.94 0.012 80);
 }
 
 .admin-shell [data-slot="card"],

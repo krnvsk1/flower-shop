@@ -73,32 +73,27 @@ function AdminContent() {
   const currentNav = NAV_ITEMS.find((n) => n.key === activeTab)!
 
   return (
-    <div className="admin-shell min-h-screen flex text-foreground">
+    <div className="admin-shell min-h-screen flex p-3 gap-3 text-foreground">
       <aside
         className={cn(
-          'sticky top-0 h-screen flex flex-col border-r border-border/80 backdrop-blur-md transition-all duration-300 z-50',
-          collapsed ? 'w-[68px]' : 'w-[240px]'
+          'admin-nav sticky top-3 h-[calc(100vh-1.5rem)] flex flex-col border border-border/70 backdrop-blur-md transition-all duration-300 z-50',
+          collapsed ? 'w-[76px]' : 'w-[248px]'
         )}
       >
-        <div className="flex items-center px-3 h-16 border-b border-border/60 flex-shrink-0">
+        <div className={cn('flex items-center flex-shrink-0 pt-3', collapsed ? 'px-2' : 'px-3')}>
           <button
             type="button"
             onClick={() => setCollapsed((c) => !c)}
             className={cn(
-              'flex items-center gap-2 transition-colors cursor-pointer flex-shrink-0',
-              collapsed ? 'p-2 mx-auto hover:text-primary' : 'px-2 py-1.5 hover:text-primary w-full'
+              'admin-nav-item flex items-center gap-2.5 transition-colors cursor-pointer w-full',
+              collapsed ? 'justify-center p-1.5' : 'px-1.5 py-1.5 hover:bg-foreground/5'
             )}
           >
-            <span className="text-xl font-semibold leading-none">A</span>
+            <span className="size-9 rounded-2xl bg-primary text-primary-foreground flex items-center justify-center text-[15px] font-semibold leading-none shadow-sm">
+              A
+            </span>
             {collapsed ? (
-              <Tooltip delayDuration={0}>
-                <TooltipTrigger asChild>
-                  <PanelLeftOpen className="w-4 h-4 text-muted-foreground" />
-                </TooltipTrigger>
-                <TooltipContent side="right" sideOffset={10}>
-                  Развернуть
-                </TooltipContent>
-              </Tooltip>
+              <span className="sr-only">Развернуть меню</span>
             ) : (
               <>
                 <AnimatePresence mode="wait">
@@ -106,7 +101,7 @@ function AdminContent() {
                     initial={{ opacity: 0, width: 0 }}
                     animate={{ opacity: 1, width: 'auto' }}
                     exit={{ opacity: 0, width: 0 }}
-                    className="text-lg font-semibold text-foreground whitespace-nowrap overflow-hidden"
+                    className="text-[15px] font-medium text-foreground whitespace-nowrap overflow-hidden"
                   >
                     Atelier
                   </motion.span>
@@ -116,32 +111,58 @@ function AdminContent() {
             )}
           </button>
         </div>
+        {collapsed ? (
+          <div className="px-2 pt-1">
+            <Tooltip delayDuration={0}>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  onClick={() => setCollapsed(false)}
+                  className="admin-nav-item w-full flex items-center justify-center p-2.5 text-muted-foreground hover:text-foreground hover:bg-foreground/5 cursor-pointer"
+                >
+                  <PanelLeftOpen className="w-4 h-4" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="right" sideOffset={12}>
+                Развернуть
+              </TooltipContent>
+            </Tooltip>
+          </div>
+        ) : null}
 
-        <nav className="flex-1 flex flex-col gap-0.5 px-2 py-4">
+        <nav className={cn('flex-1 flex flex-col gap-1 py-4', collapsed ? 'px-2' : 'px-3')}>
           {NAV_ITEMS.map((item) => {
             const Icon = item.icon
             const isActive = activeTab === item.key
 
             const button = (
               <button
-                key={item.key}
                 type="button"
                 onClick={() => openTab(item.key)}
+                data-active={isActive}
                 className={cn(
-                  'w-full flex items-center gap-2.5 px-3 py-2.5 text-sm transition-colors cursor-pointer border-l-2',
+                  'admin-nav-item w-full flex items-center text-sm cursor-pointer',
+                  collapsed ? 'justify-center p-2' : 'gap-2.5 px-2 py-1.5',
                   isActive
-                    ? 'border-primary text-foreground bg-card/50'
-                    : 'border-transparent text-muted-foreground hover:text-foreground hover:bg-card/40'
+                    ? 'text-primary'
+                    : 'text-muted-foreground hover:text-foreground'
                 )}
               >
-                <Icon className={cn('w-5 h-5 flex-shrink-0', isActive && 'text-primary')} />
+                <span
+                  className={cn(
+                    'flex items-center justify-center size-8 rounded-2xl flex-shrink-0 transition-colors',
+                    isActive ? 'bg-primary text-primary-foreground' : 'bg-foreground/[0.05]'
+                  )}
+                >
+                  <Icon className="w-4 h-4" />
+                </span>
                 <AnimatePresence mode="wait">
                   {!collapsed && (
                     <motion.span
                       initial={{ opacity: 0, width: 0 }}
                       animate={{ opacity: 1, width: 'auto' }}
                       exit={{ opacity: 0, width: 0 }}
-                      className="whitespace-nowrap overflow-hidden"
+                      className="whitespace-nowrap overflow-hidden text-left"
                     >
                       {item.label}
                     </motion.span>
@@ -154,30 +175,30 @@ function AdminContent() {
               return (
                 <Tooltip key={item.key} delayDuration={0}>
                   <TooltipTrigger asChild>{button}</TooltipTrigger>
-                  <TooltipContent side="right" sideOffset={10}>
+                  <TooltipContent side="right" sideOffset={12}>
                     {item.label}
                   </TooltipContent>
                 </Tooltip>
               )
             }
 
-            return button
+            return <div key={item.key}>{button}</div>
           })}
         </nav>
 
-        <div className="border-t border-border/60 px-2 py-3 flex-shrink-0 space-y-1">
+        <div className={cn('flex-shrink-0 space-y-1 pb-3', collapsed ? 'px-2' : 'px-3')}>
           {collapsed ? (
             <>
               <Tooltip delayDuration={0}>
                 <TooltipTrigger asChild>
                   <Link
                     href="/"
-                    className="w-full flex items-center justify-center px-3 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                    className="admin-nav-item w-full flex items-center justify-center p-2.5 text-muted-foreground hover:text-foreground hover:bg-foreground/5"
                   >
-                    <ArrowUpRight className="w-5 h-5 flex-shrink-0" />
+                    <ArrowUpRight className="w-4 h-4 flex-shrink-0" />
                   </Link>
                 </TooltipTrigger>
-                <TooltipContent side="right" sideOffset={10}>
+                <TooltipContent side="right" sideOffset={12}>
                   На витрину
                 </TooltipContent>
               </Tooltip>
@@ -186,12 +207,12 @@ function AdminContent() {
                   <button
                     type="button"
                     onClick={() => void handleLogout()}
-                    className="w-full flex items-center justify-center px-3 py-2 text-sm text-muted-foreground hover:text-primary transition-colors cursor-pointer"
+                    className="admin-nav-item w-full flex items-center justify-center p-2.5 text-muted-foreground hover:text-primary hover:bg-primary/8 cursor-pointer"
                   >
-                    <LogOut className="w-5 h-5 flex-shrink-0" />
+                    <LogOut className="w-4 h-4 flex-shrink-0" />
                   </button>
                 </TooltipTrigger>
-                <TooltipContent side="right" sideOffset={10}>
+                <TooltipContent side="right" sideOffset={12}>
                   Выйти
                 </TooltipContent>
               </Tooltip>
@@ -200,17 +221,21 @@ function AdminContent() {
             <>
               <Link
                 href="/"
-                className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                className="admin-nav-item w-full flex items-center gap-2.5 px-2 py-1.5 text-sm text-muted-foreground hover:text-foreground hover:bg-foreground/5"
               >
-                <ArrowUpRight className="w-5 h-5 flex-shrink-0" />
+                <span className="flex items-center justify-center size-8 rounded-2xl bg-foreground/[0.05]">
+                  <ArrowUpRight className="w-4 h-4" />
+                </span>
                 <span>На витрину</span>
               </Link>
               <button
                 type="button"
                 onClick={() => void handleLogout()}
-                className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-muted-foreground hover:text-primary transition-colors cursor-pointer"
+                className="admin-nav-item w-full flex items-center gap-2.5 px-2 py-1.5 text-sm text-muted-foreground hover:text-primary hover:bg-primary/8 cursor-pointer"
               >
-                <LogOut className="w-5 h-5 flex-shrink-0" />
+                <span className="flex items-center justify-center size-8 rounded-2xl bg-foreground/[0.05]">
+                  <LogOut className="w-4 h-4" />
+                </span>
                 <span>Выйти</span>
               </button>
             </>
@@ -218,9 +243,9 @@ function AdminContent() {
         </div>
       </aside>
 
-      <div className="flex-1 flex flex-col min-h-screen min-w-0">
-        <header className="sticky top-0 z-40 border-b border-border/80 bg-[oklch(0.9_0.02_80)]/92 backdrop-blur-md">
-          <div className="px-6 py-5">
+      <div className="admin-main flex-1 flex flex-col min-h-[calc(100vh-1.5rem)] min-w-0">
+        <header className="sticky top-3 z-40">
+          <div className="px-7 py-5">
             <p className="text-[10px] tracking-[0.42em] uppercase text-brass mb-1">Atelier · кабинет</p>
             <h1 className="font-medium text-3xl sm:text-4xl leading-none tracking-tight">
               {currentNav.label}
@@ -247,7 +272,7 @@ function AdminContent() {
           }}
         />
 
-        <footer className="border-t border-border/60 px-6 py-6 mt-auto">
+        <footer className="px-7 py-5 mt-auto">
           <div className="flex items-end justify-between gap-4">
             <p className="italic text-2xl leading-none">Atelier</p>
             <p className="text-[11px] tracking-[0.2em] uppercase text-muted-foreground">
