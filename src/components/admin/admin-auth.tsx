@@ -90,7 +90,7 @@ export function AdminAuth({ children }: { children: ReactNode }) {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               onKeyDown={handleKeyDown}
-              className="pl-10 rounded-none h-12 bg-card/70"
+              className="pl-10 rounded-2xl h-12 bg-card/70"
               autoFocus
             />
           </div>
@@ -98,7 +98,7 @@ export function AdminAuth({ children }: { children: ReactNode }) {
             <p className="text-sm text-destructive font-medium mb-4">{error}</p>
           ) : null}
           <Button
-            className="w-full sm:w-auto min-w-[12rem] bg-primary hover:bg-primary/90 text-primary-foreground cursor-pointer rounded-none h-12 text-[11px] tracking-[0.22em] uppercase"
+            className="w-full sm:w-auto min-w-[12rem] bg-primary hover:bg-primary/90 text-primary-foreground cursor-pointer rounded-2xl h-12 text-[11px] tracking-[0.22em] uppercase"
             onClick={() => void handleLogin()}
             disabled={loading || !password}
           >

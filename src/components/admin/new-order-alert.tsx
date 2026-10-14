@@ -153,7 +153,7 @@ export function NewOrderAlert({ onOpenOrders }: { onOpenOrders: () => void }) {
       </div>
       <div className="flex gap-2">
         <Button
-          className="flex-1 cursor-pointer rounded-none text-[11px] tracking-[0.18em] uppercase"
+          className="flex-1 cursor-pointer text-[11px] tracking-[0.18em] uppercase"
           disabled={accepting}
           onPointerDown={(event) => event.stopPropagation()}
           onClick={() => void accept(first)}
@@ -162,7 +162,7 @@ export function NewOrderAlert({ onOpenOrders }: { onOpenOrders: () => void }) {
         </Button>
         <Button
           variant="outline"
-          className="cursor-pointer rounded-none text-[11px] tracking-[0.18em] uppercase"
+          className="cursor-pointer text-[11px] tracking-[0.18em] uppercase"
           onClick={onOpenOrders}
         >
           К заказам

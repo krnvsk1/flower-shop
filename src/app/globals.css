@@ -191,6 +191,7 @@ body:has(.admin-shell) :is(h1, h2, h3, .font-display, .font-mono) {
 .admin-shell .admin-surface {
   background: oklch(0.995 0.003 90);
   border: 1px solid oklch(0.86 0.02 75);
+  border-radius: 1.25rem;
   box-shadow:
     0 1px 2px oklch(0.35 0.04 50 / 0.05),
     0 12px 28px oklch(0.35 0.04 50 / 0.07);
@@ -205,11 +206,11 @@ body:has(.admin-shell) :is(h1, h2, h3, .font-display, .font-mono) {
 .admin-shell .admin-surface:hover {
   z-index: 3;
   position: relative;
-  transform: translateY(-4px) scale(1.02);
-  border-color: oklch(0.55 0.09 25 / 0.45);
+  transform: translateY(-2px);
+  border-color: oklch(0.55 0.09 25 / 0.28);
   box-shadow:
-    0 10px 18px oklch(0.35 0.04 50 / 0.08),
-    0 24px 44px oklch(0.35 0.04 50 / 0.14);
+    0 8px 16px oklch(0.35 0.04 50 / 0.06),
+    0 18px 36px oklch(0.35 0.04 50 / 0.1);
 }
 
 .admin-shell [data-slot="card"]:focus-within,
@@ -227,16 +228,6 @@ body:has(.admin-shell) :is(h1, h2, h3, .font-display, .font-mono) {
   }
 }
 
-.admin-shell [data-slot="card"] {
-  border-radius: 0;
-}
-
-.admin-shell .rounded-lg,
-.admin-shell .rounded-xl,
-.admin-shell .rounded-md {
-  border-radius: 0;
-}
-
 .admin-shell [data-slot="table-header"] {
   background: oklch(0.97 0.01 82);
 }
@@ -246,8 +237,34 @@ body:has(.admin-shell) :is(h1, h2, h3, .font-display, .font-mono) {
 }
 
 .admin-shell [data-slot="input"],
-.admin-shell textarea {
+.admin-shell textarea,
+.admin-shell [data-slot="select-trigger"] {
   background: oklch(0.985 0.006 85);
+  border-radius: 0.9rem;
+}
+
+.admin-shell [data-slot="button"] {
+  border-radius: 0.85rem;
+}
+
+.admin-shell [data-slot="badge"] {
+  border-radius: 999px;
+}
+
+.admin-shell [data-slot="tabs-list"] {
+  height: 2.55rem;
+  border-radius: 1rem;
+  padding: 0.25rem;
+  background: oklch(0.97 0.01 82);
+}
+
+.admin-shell [data-slot="tabs-trigger"] {
+  border-radius: 0.75rem;
+}
+
+.admin-shell [data-slot="select-content"],
+.admin-shell [data-slot="dropdown-menu-content"] {
+  border-radius: 1rem;
 }
 
 .admin-shell .admin-surface.no-lift:hover,
@@ -266,6 +283,7 @@ body:has(.admin-shell) :is(h1, h2, h3, .font-display, .font-mono) {
   position: fixed;
   z-index: 80;
   transform: none;
+  border-radius: 1.25rem;
 }
 
 .leaflet-container {
@@ -299,7 +317,7 @@ body:has(.admin-shell) :is(h1, h2, h3, .font-display, .font-mono) {
 
 body:has(.admin-shell) [data-slot="dialog-content"] {
   background: oklch(0.995 0.003 90);
-  border-radius: 0;
+  border-radius: 1.35rem;
   box-shadow:
     0 1px 2px oklch(0.35 0.04 50 / 0.05),
     0 18px 40px oklch(0.35 0.04 50 / 0.12);

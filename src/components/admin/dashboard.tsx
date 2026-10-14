@@ -96,9 +96,9 @@ const statCards: {
 ]
 
 function orderStatusBadge(status: string) {
-  if (status === 'new') return { text: 'Новый', className: 'rounded-none bg-secondary text-primary' }
-  if (status === 'processing') return { text: 'В работе', className: 'rounded-none bg-accent text-brass' }
-  return { text: status, className: 'rounded-none bg-muted text-muted-foreground' }
+  if (status === 'new') return { text: 'Новый', className: 'rounded-full bg-secondary text-primary' }
+  if (status === 'processing') return { text: 'В работе', className: 'rounded-full bg-accent text-brass' }
+  return { text: status, className: 'rounded-full bg-muted text-muted-foreground' }
 }
 
 export function Dashboard({ onNavigate }: { onNavigate: (nav: DashboardNav) => void }) {
@@ -167,7 +167,6 @@ export function Dashboard({ onNavigate }: { onNavigate: (nav: DashboardNav) => v
     <div className="space-y-6">
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {statCards.map((card) => {
-          const Icon = card.icon
           const value = stats[card.key]
           const displayValue =
             card.format === 'currency' && typeof value === 'number'
@@ -222,7 +221,7 @@ export function Dashboard({ onNavigate }: { onNavigate: (nav: DashboardNav) => v
                 return (
                   <div
                     key={order.id}
-                    className="bg-muted/40 border border-border/80 p-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"
+                    className="bg-muted/40 border border-border/80 rounded-2xl p-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"
                   >
                     <div className="min-w-0">
                       <div className="flex items-center gap-2">
@@ -245,7 +244,7 @@ export function Dashboard({ onNavigate }: { onNavigate: (nav: DashboardNav) => v
                       {order.status === 'new' && (
                         <Button
                           size="sm"
-                          className="bg-primary hover:bg-primary/90 text-primary-foreground cursor-pointer rounded-none"
+                          className="bg-primary hover:bg-primary/90 text-primary-foreground cursor-pointer"
                           disabled={takingId === order.id}
                           onClick={() => void takeInProgress(order)}
                         >
